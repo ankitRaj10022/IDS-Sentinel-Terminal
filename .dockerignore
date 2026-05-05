@@ -1,0 +1,16 @@
+.git
+.github
+.idea
+.ipynb_checkpoints
+.vs
+.vscode
+.venv-wsl
+__pycache__
+automation
+Reports
+kddtrain.csv
+kddtest.csv
+dnn/kdd
+dnn/kddresults
+dnn/dnnres
+classical/*.txt

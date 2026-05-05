@@ -1,0 +1,175 @@
+name: Python application
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      check_dnn_stack:
+        description: Install TensorFlow/Keras dependencies and run the DNN smoke check
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  source-and-data-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Compile Python sources
+        run: |
+          python - <<'PY'
+          import py_compile
+          from pathlib import Path
+
+          ignored_parts = {".git", ".idea", ".ipynb_checkpoints", ".vs", ".vscode"}
+          ignored_names = {"tempCodeRunnerFile.py"}
+          failures = []
+
+          for path in Path(".").rglob("*.py"):
+              if any(part in ignored_parts for part in path.parts):
+                  continue
+              if path.name in ignored_names:
+                  continue
+              try:
+                  py_compile.compile(str(path), doraise=True)
+              except Exception as exc:
+                  failures.append(f"{path}: {exc}")
+
+          if failures:
+              raise SystemExit("\n".join(failures))
+
+          print("Python source compilation passed.")
+          PY
+
+      - name: Verify expected datasets and entrypoints
+        run: |
+          python - <<'PY'
+          import csv
+          from pathlib import Path
+
+          required_paths = [
+              Path("all.py"),
+              Path("temp1.py"),
+              Path("classical/accuclassical.py"),
+              Path("dnn/dnn1.py"),
+              Path("dnn/dnn5.py"),
+              Path("kddtrain.csv"),
+              Path("kddtest.csv"),
+              Path("dnn/kdd/binary/Training.csv"),
+              Path("dnn/kdd/binary/Testing.csv"),
+          ]
+
+          missing = [str(path) for path in required_paths if not path.exists()]
+          if missing:
+              raise SystemExit(f"Missing required files: {missing}")
+
+          csv_paths = [
+              Path("kddtrain.csv"),
+              Path("kddtest.csv"),
+              Path("dnn/kdd/binary/Training.csv"),
+              Path("dnn/kdd/binary/Testing.csv"),
+          ]
+
+          for path in csv_paths:
+              with path.open(newline="", encoding="utf-8", errors="ignore") as handle:
+                  row = next(csv.reader(handle))
+              if len(row) < 42:
+                  raise SystemExit(f"{path} has too few columns: expected at least 42, got {len(row)}")
+
+          print("Required files and CSV column counts look valid.")
+          PY
+
+  classical-stack-smoke:
+    needs: source-and-data-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: requirements-classical.txt
+
+      - name: Install classical dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-classical.txt
+
+      - name: Verify classical dependencies and sample data loading
+        run: |
+          python - <<'PY'
+          import numpy as np
+          import pandas as pd
+          import sklearn
+
+          train = pd.read_csv("kddtrain.csv", header=None, nrows=16)
+          test = pd.read_csv("kddtest.csv", header=None, nrows=16)
+
+          if train.shape[1] < 42 or test.shape[1] < 42:
+              raise SystemExit(f"Unexpected CSV shapes: train={train.shape}, test={test.shape}")
+
+          print(f"numpy={np.__version__}")
+          print(f"pandas={pd.__version__}")
+          print(f"scikit-learn={sklearn.__version__}")
+          print(f"train_shape={train.shape}")
+          print(f"test_shape={test.shape}")
+          PY
+
+  dnn-stack-smoke:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.check_dnn_stack }}
+    needs: source-and-data-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: requirements-dnn.txt
+
+      - name: Install DNN dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dnn.txt
+
+      - name: Verify DNN dependencies and sample data loading
+        run: |
+          python - <<'PY'
+          import h5py
+          import keras
+          import pandas as pd
+
+          train = pd.read_csv("dnn/kdd/binary/Training.csv", header=None, nrows=16)
+          test = pd.read_csv("dnn/kdd/binary/Testing.csv", header=None, nrows=16)
+
+          if train.shape[1] < 42 or test.shape[1] < 42:
+              raise SystemExit(f"Unexpected DNN CSV shapes: train={train.shape}, test={test.shape}")
+
+          print(f"keras={keras.__version__}")
+          print(f"h5py={h5py.__version__}")
+          print(f"train_shape={train.shape}")
+          print(f"test_shape={test.shape}")
+          PY

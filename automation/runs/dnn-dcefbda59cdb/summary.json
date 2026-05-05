@@ -1,0 +1,54 @@
+{
+  "run_id": "dnn-dcefbda59cdb",
+  "job_id": "terminal",
+  "kind": "dnn_train",
+  "created_at": "2026-05-05T03:10:18.663632+00:00",
+  "config": {
+    "architectures": [
+      1
+    ],
+    "train_sample": 3000,
+    "test_sample": 1200,
+    "epochs": 1,
+    "batch_size": 128,
+    "profile": "fast",
+    "random_state": 42
+  },
+  "dataset": {
+    "train_rows": 3000,
+    "test_rows": 1200,
+    "feature_count": 41
+  },
+  "results": [
+    {
+      "id": "dnn_1_layer",
+      "label": "DNN 1 Layer",
+      "training_seconds": 1.053,
+      "metrics": {
+        "accuracy": 0.900833,
+        "precision": 0.893222,
+        "recall": 0.995859,
+        "f1": 0.941752,
+        "support": 1200,
+        "tp": 962,
+        "tn": 119,
+        "fp": 115,
+        "fn": 4
+      },
+      "probability_summary": {
+        "min": 0.400695,
+        "mean": 0.770569,
+        "max": 0.863311
+      },
+      "history": {
+        "epochs": 1,
+        "best_accuracy": 0.825667,
+        "best_loss": 0.483427,
+        "final_accuracy": 0.825667,
+        "final_loss": 0.483427
+      },
+      "model_path": "runs/dnn-dcefbda59cdb/models/dnn1.keras"
+    }
+  ],
+  "best_model": "dnn_1_layer"
+}

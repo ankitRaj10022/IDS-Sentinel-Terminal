@@ -1,0 +1,150 @@
+{
+  "id": "f8ce165380d2480482574ab667d00482",
+  "kind": "classical_train",
+  "status": "completed",
+  "config": {
+    "profile": "fast",
+    "random_state": 42
+  },
+  "created_at": "2026-05-04T16:49:34.439051+00:00",
+  "started_at": "2026-05-04T16:49:34.453752+00:00",
+  "completed_at": "2026-05-04T16:49:50.251538+00:00",
+  "run_id": "classical-4676bd9735c7",
+  "summary": {
+    "run_id": "classical-4676bd9735c7",
+    "job_id": "f8ce165380d2480482574ab667d00482",
+    "kind": "classical_train",
+    "created_at": "2026-05-04T16:49:50.219648+00:00",
+    "config": {
+      "models": [
+        "logistic_regression",
+        "naive_bayes",
+        "decision_tree",
+        "adaboost",
+        "random_forest"
+      ],
+      "train_sample": 40000,
+      "test_sample": 15000,
+      "profile": "fast",
+      "random_state": 42
+    },
+    "dataset": {
+      "train_rows": 40000,
+      "test_rows": 15000,
+      "feature_count": 41
+    },
+    "results": [
+      {
+        "id": "random_forest",
+        "label": "Random Forest",
+        "training_seconds": 1.339,
+        "metrics": {
+          "accuracy": 0.9232,
+          "precision": 0.998267,
+          "recall": 0.906193,
+          "f1": 0.950004,
+          "support": 15000,
+          "tp": 10945,
+          "tn": 2903,
+          "fp": 19,
+          "fn": 1133
+        },
+        "probability_summary": {
+          "min": 0.0,
+          "mean": 0.733314,
+          "max": 1.0
+        },
+        "model_path": "runs/classical-4676bd9735c7/models/random_forest.joblib"
+      },
+      {
+        "id": "decision_tree",
+        "label": "Decision Tree",
+        "training_seconds": 0.479,
+        "metrics": {
+          "accuracy": 0.9228,
+          "precision": 0.997903,
+          "recall": 0.906027,
+          "f1": 0.949748,
+          "support": 15000,
+          "tp": 10943,
+          "tn": 2899,
+          "fp": 23,
+          "fn": 1135
+        },
+        "probability_summary": {
+          "min": 0.0,
+          "mean": 0.731067,
+          "max": 1.0
+        },
+        "model_path": "runs/classical-4676bd9735c7/models/decision_tree.joblib"
+      },
+      {
+        "id": "adaboost",
+        "label": "AdaBoost",
+        "training_seconds": 6.218,
+        "metrics": {
+          "accuracy": 0.921733,
+          "precision": 0.995006,
+          "recall": 0.907352,
+          "f1": 0.94916,
+          "support": 15000,
+          "tp": 10959,
+          "tn": 2867,
+          "fp": 55,
+          "fn": 1119
+        },
+        "probability_summary": {
+          "min": 0.415657,
+          "mean": 0.518662,
+          "max": 0.592831
+        },
+        "model_path": "runs/classical-4676bd9735c7/models/adaboost.joblib"
+      },
+      {
+        "id": "naive_bayes",
+        "label": "Gaussian Naive Bayes",
+        "training_seconds": 0.023,
+        "metrics": {
+          "accuracy": 0.9114,
+          "precision": 0.989972,
+          "recall": 0.899073,
+          "f1": 0.942335,
+          "support": 15000,
+          "tp": 10859,
+          "tn": 2812,
+          "fp": 110,
+          "fn": 1219
+        },
+        "probability_summary": {
+          "min": 0.0,
+          "mean": 0.732066,
+          "max": 1.0
+        },
+        "model_path": "runs/classical-4676bd9735c7/models/naive_bayes.joblib"
+      },
+      {
+        "id": "logistic_regression",
+        "label": "Logistic Regression",
+        "training_seconds": 0.945,
+        "metrics": {
+          "accuracy": 0.902333,
+          "precision": 0.988134,
+          "recall": 0.889386,
+          "f1": 0.936163,
+          "support": 15000,
+          "tp": 10742,
+          "tn": 2793,
+          "fp": 129,
+          "fn": 1336
+        },
+        "probability_summary": {
+          "min": 0.000107,
+          "mean": 0.694586,
+          "max": 1.0
+        },
+        "model_path": "runs/classical-4676bd9735c7/models/logistic_regression.joblib"
+      }
+    ],
+    "best_model": "random_forest"
+  }
+}

@@ -1,0 +1,2 @@
+"""IDS automation application package."""
+

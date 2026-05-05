@@ -1,0 +1,137 @@
+{
+  "run_id": "classical-45fc41fedadd",
+  "job_id": "terminal",
+  "kind": "classical_train",
+  "created_at": "2026-05-05T03:09:43.504542+00:00",
+  "config": {
+    "models": [
+      "logistic_regression",
+      "naive_bayes",
+      "decision_tree",
+      "adaboost",
+      "random_forest"
+    ],
+    "train_sample": 3000,
+    "test_sample": 1200,
+    "profile": "fast",
+    "random_state": 42
+  },
+  "dataset": {
+    "train_rows": 3000,
+    "test_rows": 1200,
+    "feature_count": 41
+  },
+  "results": [
+    {
+      "id": "random_forest",
+      "label": "Random Forest",
+      "training_seconds": 0.404,
+      "metrics": {
+        "accuracy": 0.9275,
+        "precision": 1.0,
+        "recall": 0.909938,
+        "f1": 0.952846,
+        "support": 1200,
+        "tp": 879,
+        "tn": 234,
+        "fp": 0,
+        "fn": 87
+      },
+      "probability_summary": {
+        "min": 0.0,
+        "mean": 0.727058,
+        "max": 1.0
+      },
+      "model_path": "runs/classical-45fc41fedadd/models/random_forest.joblib"
+    },
+    {
+      "id": "adaboost",
+      "label": "AdaBoost",
+      "training_seconds": 0.292,
+      "metrics": {
+        "accuracy": 0.926667,
+        "precision": 0.996606,
+        "recall": 0.912008,
+        "f1": 0.952432,
+        "support": 1200,
+        "tp": 881,
+        "tn": 231,
+        "fp": 3,
+        "fn": 85
+      },
+      "probability_summary": {
+        "min": 0.272036,
+        "mean": 0.557741,
+        "max": 0.664778
+      },
+      "model_path": "runs/classical-45fc41fedadd/models/adaboost.joblib"
+    },
+    {
+      "id": "logistic_regression",
+      "label": "Logistic Regression",
+      "training_seconds": 0.476,
+      "metrics": {
+        "accuracy": 0.911667,
+        "precision": 0.985327,
+        "recall": 0.903727,
+        "f1": 0.942765,
+        "support": 1200,
+        "tp": 873,
+        "tn": 221,
+        "fp": 13,
+        "fn": 93
+      },
+      "probability_summary": {
+        "min": 0.006769,
+        "mean": 0.715482,
+        "max": 0.999533
+      },
+      "model_path": "runs/classical-45fc41fedadd/models/logistic_regression.joblib"
+    },
+    {
+      "id": "naive_bayes",
+      "label": "Gaussian Naive Bayes",
+      "training_seconds": 0.006,
+      "metrics": {
+        "accuracy": 0.910833,
+        "precision": 0.98641,
+        "recall": 0.901656,
+        "f1": 0.942131,
+        "support": 1200,
+        "tp": 871,
+        "tn": 222,
+        "fp": 12,
+        "fn": 95
+      },
+      "probability_summary": {
+        "min": 0.0,
+        "mean": 0.735767,
+        "max": 1.0
+      },
+      "model_path": "runs/classical-45fc41fedadd/models/naive_bayes.joblib"
+    },
+    {
+      "id": "decision_tree",
+      "label": "Decision Tree",
+      "training_seconds": 0.011,
+      "metrics": {
+        "accuracy": 0.856667,
+        "precision": 0.99625,
+        "recall": 0.825052,
+        "f1": 0.902605,
+        "support": 1200,
+        "tp": 797,
+        "tn": 231,
+        "fp": 3,
+        "fn": 169
+      },
+      "probability_summary": {
+        "min": 0.0,
+        "mean": 0.666667,
+        "max": 1.0
+      },
+      "model_path": "runs/classical-45fc41fedadd/models/decision_tree.joblib"
+    }
+  ],
+  "best_model": "random_forest"
+}

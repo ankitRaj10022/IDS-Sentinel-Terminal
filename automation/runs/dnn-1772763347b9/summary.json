@@ -1,0 +1,54 @@
+{
+  "run_id": "dnn-1772763347b9",
+  "job_id": "terminal-auto",
+  "kind": "dnn_train",
+  "created_at": "2026-05-05T03:19:14.310697+00:00",
+  "config": {
+    "architectures": [
+      1
+    ],
+    "train_sample": 5000,
+    "test_sample": 2000,
+    "epochs": 1,
+    "batch_size": 128,
+    "profile": "fast",
+    "random_state": 42
+  },
+  "dataset": {
+    "train_rows": 5000,
+    "test_rows": 2000,
+    "feature_count": 41
+  },
+  "results": [
+    {
+      "id": "dnn_1_layer",
+      "label": "DNN 1 Layer",
+      "training_seconds": 0.47,
+      "metrics": {
+        "accuracy": 0.92,
+        "precision": 0.918108,
+        "recall": 0.98882,
+        "f1": 0.952153,
+        "support": 2000,
+        "tp": 1592,
+        "tn": 248,
+        "fp": 142,
+        "fn": 18
+      },
+      "probability_summary": {
+        "min": 0.168777,
+        "mean": 0.792621,
+        "max": 0.947958
+      },
+      "history": {
+        "epochs": 1,
+        "best_accuracy": 0.9026,
+        "best_loss": 0.363292,
+        "final_accuracy": 0.9026,
+        "final_loss": 0.363292
+      },
+      "model_path": "runs/dnn-1772763347b9/models/dnn1.keras"
+    }
+  ],
+  "best_model": "dnn_1_layer"
+}

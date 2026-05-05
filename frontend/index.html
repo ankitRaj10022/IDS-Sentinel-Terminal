@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>IDS Automation Console</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Intrusion Detection System</p>
+          <h1>Training, testing, and artifact review in one console.</h1>
+          <p class="lede">
+            This dashboard wraps the legacy NSL-KDD scripts into a docker-ready backend with repeatable classical and
+            DNN jobs, plus live visibility into the existing benchmark artifacts already stored in the repo.
+          </p>
+        </div>
+        <div class="hero-panel">
+          <div class="stat-chip">
+            <span>Mode</span>
+            <strong>WSL + Docker</strong>
+          </div>
+          <div class="stat-chip">
+            <span>API</span>
+            <strong id="health-pill">Checking</strong>
+          </div>
+          <div class="stat-chip">
+            <span>Focus</span>
+            <strong>Binary IDS automation</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid two-up">
+        <article class="card">
+          <div class="card-head">
+            <h2>Dataset Layout</h2>
+            <button id="refresh-overview" class="ghost">Refresh</button>
+          </div>
+          <div id="dataset-summary" class="stack"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Automation Controls</h2>
+            <button id="run-legacy" class="ghost">Snapshot Legacy Metrics</button>
+          </div>
+          <div class="control-grid">
+            <form id="classical-form" class="control-block">
+              <h3>Classical Suite</h3>
+              <label>
+                Profile
+                <select name="profile">
+                  <option value="fast">Fast</option>
+                  <option value="balanced">Balanced</option>
+                  <option value="full">Full</option>
+                </select>
+              </label>
+              <label>
+                Train sample override
+                <input name="train_sample" type="number" min="1000" placeholder="Optional" />
+              </label>
+              <label>
+                Test sample override
+                <input name="test_sample" type="number" min="1000" placeholder="Optional" />
+              </label>
+              <button type="submit">Launch Classical Job</button>
+            </form>
+
+            <form id="dnn-form" class="control-block accent">
+              <h3>DNN Suite</h3>
+              <label>
+                Profile
+                <select name="profile">
+                  <option value="fast">Fast</option>
+                  <option value="balanced">Balanced</option>
+                  <option value="full">Full</option>
+                </select>
+              </label>
+              <label>
+                Epoch override
+                <input name="epochs" type="number" min="1" max="100" placeholder="Optional" />
+              </label>
+              <label>
+                Batch size override
+                <input name="batch_size" type="number" min="16" max="512" placeholder="Optional" />
+              </label>
+              <button type="submit">Launch DNN Job</button>
+            </form>
+          </div>
+        </article>
+      </section>
+
+      <section class="grid two-up">
+        <article class="card">
+          <div class="card-head">
+            <h2>Legacy Benchmark Artifacts</h2>
+            <span class="muted">Computed from the existing prediction files already inside the repo.</span>
+          </div>
+          <div id="legacy-results" class="stack"></div>
+        </article>
+
+        <article class="card">
+          <div class="card-head">
+            <h2>Job Activity</h2>
+            <span class="muted">Queued, running, and completed automation work.</span>
+          </div>
+          <div id="job-list" class="stack"></div>
+        </article>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <h2>Run Summaries</h2>
+          <span class="muted">Latest completed train/test executions.</span>
+        </div>
+        <div id="run-list" class="stack"></div>
+      </section>
+    </main>
+
+    <template id="empty-state">
+      <div class="empty">Nothing to show yet.</div>
+    </template>
+
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>
+

@@ -1,0 +1,3 @@
+-r requirements-classical.txt
+tensorflow==2.15.1
+h5py>=3.10,<4

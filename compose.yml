@@ -1,0 +1,11 @@
+services:
+  ids-automation:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ids-automation
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    working_dir: /app
