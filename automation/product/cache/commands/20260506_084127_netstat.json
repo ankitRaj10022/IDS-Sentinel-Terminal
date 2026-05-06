@@ -1,0 +1,116 @@
+{
+  "created_at": "2026-05-06T03:11:27+00:00",
+  "kind": "netstat",
+  "payload": [
+    {
+      "proto": "UDP",
+      "local": "0.0.0.0:53",
+      "local_host": "0.0.0.0",
+      "local_port": 53,
+      "remote": "*:*",
+      "remote_host": "*",
+      "remote_port": null,
+      "state": "UDP",
+      "pid": "11496"
+    },
+    {
+      "proto": "TCP",
+      "local": "0.0.0.0:135",
+      "local_host": "0.0.0.0",
+      "local_port": 135,
+      "remote": "0.0.0.0:0",
+      "remote_host": "0.0.0.0",
+      "remote_port": 0,
+      "state": "LISTENING",
+      "pid": "1760"
+    },
+    {
+      "proto": "TCP",
+      "local": "[::]:135",
+      "local_host": "::",
+      "local_port": 135,
+      "remote": "[::]:0",
+      "remote_host": "::",
+      "remote_port": 0,
+      "state": "LISTENING",
+      "pid": "1760"
+    },
+    {
+      "proto": "UDP",
+      "local": "10.96.13.72:137",
+      "local_host": "10.96.13.72",
+      "local_port": 137,
+      "remote": "*:*",
+      "remote_host": "*",
+      "remote_port": null,
+      "state": "UDP",
+      "pid": "4"
+    },
+    {
+      "proto": "UDP",
+      "local": "172.25.144.1:137",
+      "local_host": "172.25.144.1",
+      "local_port": 137,
+      "remote": "*:*",
+      "remote_host": "*",
+      "remote_port": null,
+      "state": "UDP",
+      "pid": "4"
+    },
+    {
+      "proto": "UDP",
+      "local": "10.96.13.72:138",
+      "local_host": "10.96.13.72",
+      "local_port": 138,
+      "remote": "*:*",
+      "remote_host": "*",
+      "remote_port": null,
+      "state": "UDP",
+      "pid": "4"
+    },
+    {
+      "proto": "UDP",
+      "local": "172.25.144.1:138",
+      "local_host": "172.25.144.1",
+      "local_port": 138,
+      "remote": "*:*",
+      "remote_host": "*",
+      "remote_port": null,
+      "state": "UDP",
+      "pid": "4"
+    },
+    {
+      "proto": "TCP",
+      "local": "10.96.13.72:139",
+      "local_host": "10.96.13.72",
+      "local_port": 139,
+      "remote": "0.0.0.0:0",
+      "remote_host": "0.0.0.0",
+      "remote_port": 0,
+      "state": "LISTENING",
+      "pid": "4"
+    },
+    {
+      "proto": "TCP",
+      "local": "172.25.144.1:139",
+      "local_host": "172.25.144.1",
+      "local_port": 139,
+      "remote": "0.0.0.0:0",
+      "remote_host": "0.0.0.0",
+      "remote_port": 0,
+      "state": "LISTENING",
+      "pid": "4"
+    },
+    {
+      "proto": "TCP",
+      "local": "0.0.0.0:445",
+      "local_host": "0.0.0.0",
+      "local_port": 445,
+      "remote": "0.0.0.0:0",
+      "remote_host": "0.0.0.0",
+      "remote_port": 0,
+      "state": "LISTENING",
+      "pid": "4"
+    }
+  ]
+}

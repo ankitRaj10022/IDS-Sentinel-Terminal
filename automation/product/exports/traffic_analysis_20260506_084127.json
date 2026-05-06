@@ -1,0 +1,110 @@
+{
+  "analysis_id": "scan-20260506_084127",
+  "created_at": "2026-05-06T03:11:27+00:00",
+  "source_file": "kddtest.csv",
+  "rows_analyzed": 1000,
+  "malformed_rows": 0,
+  "limit": 1000,
+  "average_risk_score": 0.19169,
+  "actual_counts": {
+    "0": 703,
+    "1": 297
+  },
+  "predicted_counts": {
+    "0": 809,
+    "1": 191
+  },
+  "risk_counts": {
+    "low": 809,
+    "critical": 191
+  },
+  "family_counts": {
+    "normal": 687,
+    "probe_scan": 115,
+    "credential_abuse": 2,
+    "network_attack": 4,
+    "dos_flood": 186,
+    "payload_or_exfiltration": 2,
+    "malware_like_activity": 3,
+    "privilege_escalation": 1
+  },
+  "top_protocols": [
+    [
+      "1",
+      552
+    ],
+    [
+      "2",
+      256
+    ],
+    [
+      "3",
+      192
+    ]
+  ],
+  "top_services": [
+    [
+      "1",
+      450
+    ],
+    [
+      "54",
+      190
+    ],
+    [
+      "24",
+      185
+    ],
+    [
+      "57",
+      71
+    ],
+    [
+      "19",
+      57
+    ],
+    [
+      "49",
+      22
+    ],
+    [
+      "65",
+      5
+    ],
+    [
+      "3",
+      5
+    ]
+  ],
+  "top_flags": [
+    [
+      "1",
+      997
+    ],
+    [
+      "7",
+      1
+    ],
+    [
+      "5",
+      1
+    ],
+    [
+      "10",
+      1
+    ]
+  ],
+  "metrics": {
+    "accuracy": 0.882,
+    "precision": 0.968586,
+    "recall": 0.622896,
+    "f1": 0.758197,
+    "tp": 185,
+    "tn": 697,
+    "fp": 6,
+    "fn": 112
+  },
+  "model_created_at": "2026-05-06T02:52:07+00:00",
+  "export_csv": "automation\\product\\exports\\traffic_analysis_20260506_084127.csv",
+  "export_json": "automation\\product\\exports\\traffic_analysis_20260506_084127.json"
+}

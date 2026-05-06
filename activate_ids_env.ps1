@@ -1,8 +1,37 @@
 # IDS Project Environment Activation Script
-# This script loads the conda wrapper and activates the ids-env environment
+# This script loads Conda and activates the ids-env environment.
+$ErrorActionPreference = "Stop"
+
+function Get-CondaHook {
+    $candidates = @(
+        "$env:USERPROFILE\conda-wrapper.ps1",
+        "$env:USERPROFILE\anaconda3\shell\condabin\conda-hook.ps1",
+        "$env:USERPROFILE\miniconda3\shell\condabin\conda-hook.ps1",
+        "$env:LOCALAPPDATA\miniconda3\shell\condabin\conda-hook.ps1",
+        "C:\ProgramData\anaconda3\shell\condabin\conda-hook.ps1",
+        "C:\ProgramData\miniconda3\shell\condabin\conda-hook.ps1"
+    )
+
+    foreach ($candidate in $candidates) {
+        if (Test-Path -LiteralPath $candidate) {
+            return $candidate
+        }
+    }
+
+    return $null
+}
 
 Write-Host "Loading Conda wrapper..." -ForegroundColor Yellow
-. "$env:USERPROFILE\conda-wrapper.ps1"
+$condaHook = Get-CondaHook
+if (-not $condaHook) {
+    throw "Could not find Conda. Install Miniconda or Anaconda, then reopen PowerShell and run this script again."
+}
+
+. $condaHook
+
+if (-not (Get-Command conda -ErrorAction SilentlyContinue)) {
+    throw "Conda was found at '$condaHook', but the 'conda' command did not load correctly."
+}
 
 Write-Host ""
 Write-Host "Activating IDS environment..." -ForegroundColor Yellow

@@ -1,0 +1,62 @@
+{
+  "created_at": "2026-05-06T03:11:37+00:00",
+  "kind": "ps",
+  "payload": [
+    {
+      "Image Name": "System Idle Process",
+      "PID": "0",
+      "Session Name": "Services",
+      "Session#": "0",
+      "Mem Usage": "8 K"
+    },
+    {
+      "Image Name": "System",
+      "PID": "4",
+      "Session Name": "Services",
+      "Session#": "0",
+      "Mem Usage": "140 K"
+    },
+    {
+      "Image Name": "Secure System",
+      "PID": "236",
+      "Session Name": "Services",
+      "Session#": "0",
+      "Mem Usage": "56,220 K"
+    },
+    {
+      "Image Name": "Registry",
+      "PID": "280",
+      "Session Name": "Services",
+      "Session#": "0",
+      "Mem Usage": "35,020 K"
+    },
+    {
+      "Image Name": "smss.exe",
+      "PID": "808",
+      "Session Name": "Services",
+      "Session#": "0",
+      "Mem Usage": "240 K"
+    },
+    {
+      "Image Name": "csrss.exe",
+      "PID": "1252",
+      "Session Name": "Services",
+      "Session#": "0",
+      "Mem Usage": "2,996 K"
+    },
+    {
+      "Image Name": "wininit.exe",
+      "PID": "1384",
+      "Session Name": "Services",
+      "Session#": "0",
+      "Mem Usage": "1,436 K"
+    },
+    {
+      "Image Name": "csrss.exe",
+      "PID": "1392",
+      "Session Name": "Console",
+      "Session#": "1",
+      "Mem Usage": "3,968 K"
+    }
+  ]
+}
