@@ -37,6 +37,10 @@ def stage_sources() -> Path:
     BUILD_SRC_DIR.mkdir(parents=True, exist_ok=True)
     shutil.copy2(ROOT / "pyproject.toml", BUILD_SRC_DIR / "pyproject.toml")
     shutil.copy2(ROOT / "README.md", BUILD_SRC_DIR / "README.md")
+    if (ROOT / "INSTALL_FOR_PITCH.md").exists():
+        shutil.copy2(ROOT / "INSTALL_FOR_PITCH.md", BUILD_SRC_DIR / "INSTALL_FOR_PITCH.md")
+    if (ROOT / "DOWNLOAD_TOOL.md").exists():
+        shutil.copy2(ROOT / "DOWNLOAD_TOOL.md", BUILD_SRC_DIR / "DOWNLOAD_TOOL.md")
     if (ROOT / "MANIFEST.in").exists():
         shutil.copy2(ROOT / "MANIFEST.in", BUILD_SRC_DIR / "MANIFEST.in")
     shutil.copytree(

@@ -47,7 +47,7 @@ def prepare_stage(include_exports: bool = False) -> Path:
     copy_tree(ROOT / "ids_app", app_src / "ids_app")
     zipapp.create_archive(app_src, BUILD_DIR / APP_PYZ, main="ids_app.product_app:main", interpreter="/usr/bin/env python3")
 
-    for filename in ("README.md",):
+    for filename in ("README.md", "INSTALL_FOR_PITCH.md", "DOWNLOAD_TOOL.md"):
         source = ROOT / filename
         if source.exists():
             shutil.copy2(source, BUILD_DIR / filename)

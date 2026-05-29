@@ -11,7 +11,7 @@ The remaining work is ownership and release setup on GitHub and PyPI.
 ## Package Identity
 
 - PyPI project name: `ids-sentinel-terminal`
-- GitHub repository: `ankitRaj10022/IDS-Sentinel`
+- GitHub repository: `ankitRaj10022/IDS-Sentinel-Terminal`
 - Release workflow file: `.github/workflows/release.yml`
 - PyPI environment name in GitHub Actions: `pypi`
 
@@ -29,7 +29,7 @@ On PyPI:
 ```text
 PyPI project name: ids-sentinel-terminal
 Owner: ankitRaj10022
-Repository name: IDS-Sentinel
+Repository name: IDS-Sentinel-Terminal
 Workflow name: release.yml
 Environment name: pypi
 ```
@@ -65,7 +65,7 @@ python scripts\build_distributions.py
 Install the wheel locally:
 
 ```bash
-pipx install dist/ids_sentinel_terminal-0.2.0-py3-none-any.whl
+pipx install dist/ids_sentinel_terminal-0.2.1-py3-none-any.whl
 ids-sentinel --version
 ids-sentinel status
 ```
@@ -74,7 +74,7 @@ ids-sentinel status
 
 Once the branch is pushed and the pending publisher is configured:
 
-1. Create a Git tag such as `v0.2.0`.
+1. Create a Git tag such as `v0.2.1`.
 2. Publish a GitHub Release for that tag.
 3. GitHub Actions will:
    - build the wheel and source distribution

@@ -1,6 +1,6 @@
 # IDS Sentinel Terminal
 
-IDS Sentinel Terminal is an installable defensive CLI and GUI tool built around bundled IDS CSV datasets. The preferred interface is the `ids-sentinel` command, which can be installed as a normal Python application instead of requiring users to clone the repository and run repo-local launchers.
+IDS Sentinel Terminal is an installable defensive CLI and GUI tool built around bundled IDS CSV datasets. The preferred interface is the `ids-sentinel` command, which can be installed as a normal Python application instead of requiring users to manually clone the repository and run repo-local launchers.
 
 The older FastAPI/Docker automation app and ML training code are still present in this repository. For end users, the recommended interface is the packaged CLI/GUI tool.
 
@@ -24,7 +24,7 @@ This product does not install firewall rules, block packets, exploit systems, by
 ## Project Layout
 
 ```text
-IDS-Sentinel/
+IDS-Sentinel-Terminal/
   pyproject.toml                       Installable package metadata
   terminal.cmd                         Windows product launcher
   terminal.ps1                         PowerShell product launcher
@@ -62,7 +62,47 @@ Conda/Python data-science environment for direct classical/DNN training
 
 ## Tool-First Install
 
-Once the package is published, the cleanest setup is with `pipx`:
+Important: `pip install ids-sentinel-terminal` only works after the package is published on PyPI. If PyPI reports `No matching distribution found`, use the GitHub URL, local wheel, or portable archive below.
+
+To download only the released tool on another machine, use GitHub Releases. See `DOWNLOAD_TOOL.md`.
+
+Windows PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/ankitRaj10022/IDS-Sentinel-Terminal/main/scripts/install_from_release.ps1 | iex"
+```
+
+Linux:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ankitRaj10022/IDS-Sentinel-Terminal/main/scripts/install_from_release.sh | sh
+```
+
+For a jury demo before PyPI publication, install directly from GitHub:
+
+```bash
+pip install git+https://github.com/ankitRaj10022/IDS-Sentinel-Terminal.git
+```
+
+With `pipx`, recommended on Linux:
+
+```bash
+pipx install --force git+https://github.com/ankitRaj10022/IDS-Sentinel-Terminal.git
+```
+
+From this source checkout, install the built wheel:
+
+```powershell
+py -3 -m pip install --user --force-reinstall .\dist\ids_sentinel_terminal-0.2.1-py3-none-any.whl
+```
+
+On Linux/macOS from this source checkout:
+
+```bash
+pipx install --force ./dist/ids_sentinel_terminal-0.2.1-py3-none-any.whl
+```
+
+Once the package is published on PyPI, the cleanest setup is with `pipx`:
 
 ```bash
 pipx install ids-sentinel-terminal
@@ -88,8 +128,10 @@ For local development or pre-publish testing from a source checkout, build the w
 ```powershell
 python -m pip install build
 python scripts\build_python_package.py
-pip install dist\ids_sentinel_terminal-0.2.0-py3-none-any.whl
+pip install dist\ids_sentinel_terminal-0.2.1-py3-none-any.whl
 ```
+
+For pitch-specific install commands, see `INSTALL_FOR_PITCH.md`.
 
 The installed tool keeps its writable working data in a user home directory:
 

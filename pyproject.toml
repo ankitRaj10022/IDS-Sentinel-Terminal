@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ids-sentinel-terminal"
-version = "0.2.0"
+version = "0.2.1"
 description = "Installable CLI and GUI for IDS Sentinel Terminal traffic analysis and local triage."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -33,9 +33,9 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/ankitRaj10022/IDS-Sentinel"
-Repository = "https://github.com/ankitRaj10022/IDS-Sentinel"
-Issues = "https://github.com/ankitRaj10022/IDS-Sentinel/issues"
+Homepage = "https://github.com/ankitRaj10022/IDS-Sentinel-Terminal"
+Repository = "https://github.com/ankitRaj10022/IDS-Sentinel-Terminal"
+Issues = "https://github.com/ankitRaj10022/IDS-Sentinel-Terminal/issues"
 
 [project.scripts]
 ids-sentinel = "ids_app.product_app:main"
