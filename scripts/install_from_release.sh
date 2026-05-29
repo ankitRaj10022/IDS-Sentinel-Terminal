@@ -42,7 +42,7 @@ echo "Downloading IDS Sentinel Terminal from:"
 echo "  $url"
 
 if command -v curl >/dev/null 2>&1; then
-  curl -fL "$url" -o "$archive"
+  curl -fsSL "$url" -o "$archive"
 elif command -v wget >/dev/null 2>&1; then
   wget -O "$archive" "$url"
 else
