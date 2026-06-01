@@ -11,7 +11,6 @@ import zipfile
 from datetime import datetime
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 BUILD_DIR = ROOT / "build" / "ids-sentinel-terminal"
 DIST_DIR = ROOT / "dist"
@@ -45,7 +44,12 @@ def prepare_stage(include_exports: bool = False) -> Path:
 
     app_src = BUILD_DIR / "pyz_src"
     copy_tree(ROOT / "ids_app", app_src / "ids_app")
-    zipapp.create_archive(app_src, BUILD_DIR / APP_PYZ, main="ids_app.product_app:main", interpreter="/usr/bin/env python3")
+    zipapp.create_archive(
+        app_src,
+        BUILD_DIR / APP_PYZ,
+        main="ids_app.product_app:main",
+        interpreter="/usr/bin/env python3",
+    )
 
     for filename in ("README.md", "INSTALL_FOR_PITCH.md", "DOWNLOAD_TOOL.md"):
         source = ROOT / filename
@@ -62,7 +66,10 @@ def prepare_stage(include_exports: bool = False) -> Path:
         copy_tree(ROOT / "automation" / "product" / "exports", product_dir / "exports")
 
     write_launchers(BUILD_DIR)
-    write_text(BUILD_DIR / "VERSION.txt", f"build_time={datetime.now().isoformat(timespec='seconds')}\n")
+    write_text(
+        BUILD_DIR / "VERSION.txt",
+        f"build_time={datetime.now().isoformat(timespec='seconds')}\n",
+    )
     shutil.rmtree(app_src)
     return BUILD_DIR
 
@@ -102,7 +109,17 @@ call "%~dp0ids-sentinel-terminal.cmd" gui
 set -eu
 DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 export IDS_PRODUCT_HOME="$DIR"
-exec python3 "$DIR/ids-sentinel-terminal.pyz" "$@"
+PYTHON_BIN=${PYTHON:-python3}
+if [ "${1:-}" = "gui" ]; then
+  if ! "$PYTHON_BIN" -c "import tkinter" >/dev/null 2>&1; then
+    echo "IDS Sentinel GUI requires tkinter, but it is not installed for $PYTHON_BIN." >&2
+    echo "Install it on Ubuntu/Debian with: sudo apt install python3-tk" >&2
+    echo "If your system has a version-specific package, try: sudo apt install python3.14-tk" >&2
+    echo "The terminal CLI still works: $0 status" >&2
+    exit 1
+  fi
+fi
+exec "$PYTHON_BIN" "$DIR/ids-sentinel-terminal.pyz" "$@"
 """,
         executable=True,
     )
@@ -112,7 +129,15 @@ exec python3 "$DIR/ids-sentinel-terminal.pyz" "$@"
 set -eu
 DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 export IDS_PRODUCT_HOME="$DIR"
-exec python3 "$DIR/ids-sentinel-terminal.pyz" gui "$@"
+PYTHON_BIN=${PYTHON:-python3}
+if ! "$PYTHON_BIN" -c "import tkinter" >/dev/null 2>&1; then
+  echo "IDS Sentinel GUI requires tkinter, but it is not installed for $PYTHON_BIN." >&2
+  echo "Install it on Ubuntu/Debian with: sudo apt install python3-tk" >&2
+  echo "If your system has a version-specific package, try: sudo apt install python3.14-tk" >&2
+  echo "The terminal CLI still works: $DIR/ids-sentinel-terminal status" >&2
+  exit 1
+fi
+exec "$PYTHON_BIN" "$DIR/ids-sentinel-terminal.pyz" gui "$@"
 """,
         executable=True,
     )
@@ -175,15 +200,29 @@ def build_python_package() -> list[Path]:
         check=True,
     )
     targets = []
-    for pattern in ("ids_sentinel_terminal-*.whl", "ids_sentinel_terminal-*.tar.gz", "ids-sentinel-terminal-*.tar.gz"):
+    for pattern in (
+        "ids_sentinel_terminal-*.whl",
+        "ids_sentinel_terminal-*.tar.gz",
+        "ids-sentinel-terminal-*.tar.gz",
+    ):
         targets.extend(sorted(DIST_DIR.glob(pattern)))
     return targets
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Build cross-platform IDS Sentinel Terminal archives.")
-    parser.add_argument("--include-exports", action="store_true", help="Bundle generated analysis reports too.")
-    parser.add_argument("--python-package", action="store_true", help="Also build wheel and sdist via python -m build.")
+    parser = argparse.ArgumentParser(
+        description="Build cross-platform IDS Sentinel Terminal archives."
+    )
+    parser.add_argument(
+        "--include-exports",
+        action="store_true",
+        help="Bundle generated analysis reports too.",
+    )
+    parser.add_argument(
+        "--python-package",
+        action="store_true",
+        help="Also build wheel and sdist via python -m build.",
+    )
     args = parser.parse_args()
     targets = build_archives(include_exports=args.include_exports)
     if args.python_package:

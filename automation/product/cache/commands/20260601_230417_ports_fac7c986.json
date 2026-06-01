@@ -1,0 +1,61 @@
+{
+  "created_at": "2026-06-01T17:34:17+00:00",
+  "kind": "ports",
+  "payload": [
+    {
+      "proto": "UDP",
+      "local": "192.168.122.1:53",
+      "local_host": "192.168.122.1",
+      "local_port": 53,
+      "remote": "0.0.0.0:*",
+      "remote_host": "0.0.0.0",
+      "remote_port": null,
+      "state": "UDP",
+      "pid": ""
+    },
+    {
+      "proto": "UDP",
+      "local": "127.0.0.54:53",
+      "local_host": "127.0.0.54",
+      "local_port": 53,
+      "remote": "0.0.0.0:*",
+      "remote_host": "0.0.0.0",
+      "remote_port": null,
+      "state": "UDP",
+      "pid": ""
+    },
+    {
+      "proto": "UDP",
+      "local": "127.0.0.53%lo:53",
+      "local_host": "127.0.0.53%lo",
+      "local_port": 53,
+      "remote": "0.0.0.0:*",
+      "remote_host": "0.0.0.0",
+      "remote_port": null,
+      "state": "UDP",
+      "pid": ""
+    },
+    {
+      "proto": "UDP",
+      "local": "0.0.0.0%virbr0:67",
+      "local_host": "0.0.0.0%virbr0",
+      "local_port": 67,
+      "remote": "0.0.0.0:*",
+      "remote_host": "0.0.0.0",
+      "remote_port": null,
+      "state": "UDP",
+      "pid": ""
+    },
+    {
+      "proto": "UDP",
+      "local": "127.0.0.1:323",
+      "local_host": "127.0.0.1",
+      "local_port": 323,
+      "remote": "0.0.0.0:*",
+      "remote_host": "0.0.0.0",
+      "remote_port": null,
+      "state": "UDP",
+      "pid": ""
+    }
+  ]
+}

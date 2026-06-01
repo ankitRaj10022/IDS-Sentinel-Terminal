@@ -2,4 +2,12 @@
 set -eu
 DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 export IDS_PRODUCT_HOME="$DIR"
-exec python3 "$DIR/ids-sentinel-terminal.pyz" gui "$@"
+PYTHON_BIN=${PYTHON:-python3}
+if ! "$PYTHON_BIN" -c "import tkinter" >/dev/null 2>&1; then
+  echo "IDS Sentinel GUI requires tkinter, but it is not installed for $PYTHON_BIN." >&2
+  echo "Install it on Ubuntu/Debian with: sudo apt install python3-tk" >&2
+  echo "If your system has a version-specific package, try: sudo apt install python3.14-tk" >&2
+  echo "The terminal CLI still works: $DIR/ids-sentinel-terminal status" >&2
+  exit 1
+fi
+exec "$PYTHON_BIN" "$DIR/ids-sentinel-terminal.pyz" gui "$@"

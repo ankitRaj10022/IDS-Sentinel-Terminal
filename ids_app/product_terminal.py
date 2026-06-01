@@ -4,8 +4,8 @@ import argparse
 import csv
 import fnmatch
 import hashlib
-import ipaddress
 import importlib.resources
+import ipaddress
 import json
 import math
 import os
@@ -29,10 +29,20 @@ from . import __version__
 PACKAGE_DIR = Path(__file__).resolve().parent
 SOURCE_ROOT = PACKAGE_DIR.parent.resolve()
 DEFAULT_HOME_DIR = Path.home() / ".ids-sentinel-terminal"
-IS_SOURCE_CHECKOUT = (SOURCE_ROOT / ".git").exists() and (SOURCE_ROOT / "kddtrain.csv").exists() and (SOURCE_ROOT / "kddtest.csv").exists()
+IS_SOURCE_CHECKOUT = (
+    (SOURCE_ROOT / ".git").exists()
+    and (SOURCE_ROOT / "kddtrain.csv").exists()
+    and (SOURCE_ROOT / "kddtest.csv").exists()
+)
 ENV_ROOT = os.environ.get("IDS_PRODUCT_HOME")
-ROOT_DIR = Path(ENV_ROOT).expanduser().resolve() if ENV_ROOT else (SOURCE_ROOT if IS_SOURCE_CHECKOUT else DEFAULT_HOME_DIR.resolve())
-RUNTIME_MODE = "override" if ENV_ROOT else ("source" if IS_SOURCE_CHECKOUT else "installed")
+ROOT_DIR = (
+    Path(ENV_ROOT).expanduser().resolve()
+    if ENV_ROOT
+    else (SOURCE_ROOT if IS_SOURCE_CHECKOUT else DEFAULT_HOME_DIR.resolve())
+)
+RUNTIME_MODE = (
+    "override" if ENV_ROOT else ("source" if IS_SOURCE_CHECKOUT else "installed")
+)
 BUNDLED_SEED_FILES = {
     "kddtrain.csv": "kddtrain.csv",
     "kddtest.csv": "kddtest.csv",
@@ -130,7 +140,29 @@ COMMON_PORT_RISKS = {
     11211: "Memcached. Amplification and data exposure risk.",
     27017: "MongoDB. Database exposure risk.",
 }
-COMMON_PROBE_PORTS = [21, 22, 23, 25, 53, 80, 110, 135, 139, 143, 443, 445, 1433, 3306, 3389, 5432, 5900, 6379, 8080, 9200, 27017]
+COMMON_PROBE_PORTS = [
+    21,
+    22,
+    23,
+    25,
+    53,
+    80,
+    110,
+    135,
+    139,
+    143,
+    443,
+    445,
+    1433,
+    3306,
+    3389,
+    5432,
+    5900,
+    6379,
+    8080,
+    9200,
+    27017,
+]
 TEXT_SEARCH_MAX_FILE_BYTES = 128 * 1024 * 1024
 TEXT_SEARCH_SKIP_SUFFIXES = {
     ".7z",
@@ -216,7 +248,14 @@ FEATURE_NAMES = [
 
 
 def ensure_product_dirs() -> None:
-    for path in (PRODUCT_DIR, EXPORTS_DIR, IMPORTS_DIR, CACHE_DIR, INDEX_DIR, COMMAND_CACHE_DIR):
+    for path in (
+        PRODUCT_DIR,
+        EXPORTS_DIR,
+        IMPORTS_DIR,
+        CACHE_DIR,
+        INDEX_DIR,
+        COMMAND_CACHE_DIR,
+    ):
         path.mkdir(parents=True, exist_ok=True)
     if LEGACY_INDEX_DIR.exists() and LEGACY_INDEX_DIR.is_dir():
         for legacy_file in LEGACY_INDEX_DIR.glob("*.json"):
@@ -259,12 +298,19 @@ def percent(part: int | float, total: int | float) -> str:
 def table(headers: list[str], rows: list[list[Any]]) -> str:
     text_rows = [[format_number(cell) for cell in row] for row in rows]
     widths = [
-        max(len(header), *(len(row[index]) for row in text_rows)) if text_rows else len(header)
+        max(len(header), *(len(row[index]) for row in text_rows))
+        if text_rows
+        else len(header)
         for index, header in enumerate(headers)
     ]
-    header_line = "  ".join(header.ljust(widths[index]) for index, header in enumerate(headers))
+    header_line = "  ".join(
+        header.ljust(widths[index]) for index, header in enumerate(headers)
+    )
     rule = "  ".join("-" * width for width in widths)
-    body = ["  ".join(row[index].ljust(widths[index]) for index in range(len(headers))) for row in text_rows]
+    body = [
+        "  ".join(row[index].ljust(widths[index]) for index in range(len(headers)))
+        for row in text_rows
+    ]
     return "\n".join([header_line, rule, *body])
 
 
@@ -307,14 +353,20 @@ def write_json(path: Path, payload: Any) -> None:
 def cache_artifact(kind: str, payload: Any) -> Path:
     ensure_product_dirs()
     safe_kind = re.sub(r"[^A-Za-z0-9_.-]+", "_", kind).strip("_") or "artifact"
-    path = COMMAND_CACHE_DIR / f"{compact_timestamp()}_{safe_kind}_{uuid4().hex[:8]}.json"
+    path = (
+        COMMAND_CACHE_DIR / f"{compact_timestamp()}_{safe_kind}_{uuid4().hex[:8]}.json"
+    )
     write_json(path, {"created_at": utc_now(), "kind": kind, "payload": payload})
     prune_cache_artifacts()
     return path
 
 
 def prune_cache_artifacts(max_files: int = 500) -> None:
-    artifacts = sorted(COMMAND_CACHE_DIR.glob("*.json"), key=lambda item: item.stat().st_mtime, reverse=True)
+    artifacts = sorted(
+        COMMAND_CACHE_DIR.glob("*.json"),
+        key=lambda item: item.stat().st_mtime,
+        reverse=True,
+    )
     for stale in artifacts[max_files:]:
         stale.unlink(missing_ok=True)
 
@@ -378,7 +430,9 @@ def resolve_any_product_path(path_text: str | None, default: Path = TEST_CSV) ->
     return resolved
 
 
-def resolve_readable_path(path_text: str | None, default: Path | None = None, base: Path | None = None) -> Path:
+def resolve_readable_path(
+    path_text: str | None, default: Path | None = None, base: Path | None = None
+) -> Path:
     if not path_text:
         if default is None:
             raise ValueError("path is required")
@@ -400,7 +454,9 @@ def safe_float(value: str) -> float:
         return 0.0
 
 
-def iter_kdd_rows(path: Path, limit: int | None = None) -> Iterable[tuple[int, str, list[float]]]:
+def iter_kdd_rows(
+    path: Path, limit: int | None = None
+) -> Iterable[tuple[int, str, list[float]]]:
     with path.open("r", encoding="utf-8", errors="ignore", newline="") as handle:
         reader = csv.reader(handle)
         emitted = 0
@@ -414,7 +470,9 @@ def iter_kdd_rows(path: Path, limit: int | None = None) -> Iterable[tuple[int, s
                 return
 
 
-def iter_generated_rows(path: Path, limit: int | None = None) -> Iterable[tuple[int, str, list[float]]]:
+def iter_generated_rows(
+    path: Path, limit: int | None = None
+) -> Iterable[tuple[int, str, list[float]]]:
     with path.open("r", encoding="utf-8", errors="ignore", newline="") as handle:
         reader = csv.DictReader(handle)
         emitted = 0
@@ -422,7 +480,10 @@ def iter_generated_rows(path: Path, limit: int | None = None) -> Iterable[tuple[
             label = str(row.get("actual_label") or row.get("label") or "").strip()
             if label not in BINARY_LABELS:
                 continue
-            features = [safe_float(row.get(f"{CSV_FEATURE_PREFIX}{name}", "0")) for name in FEATURE_NAMES]
+            features = [
+                safe_float(row.get(f"{CSV_FEATURE_PREFIX}{name}", "0"))
+                for name in FEATURE_NAMES
+            ]
             yield row_number, label, features
             emitted += 1
             if limit is not None and emitted >= limit:
@@ -461,7 +522,12 @@ def empty_label_stats() -> dict[str, list[RunningStat]]:
     return {label: [RunningStat() for _ in FEATURE_NAMES] for label in BINARY_LABELS}
 
 
-def update_model_stats(stats: dict[str, list[RunningStat]], labels: Counter[str], label: str, features: list[float]) -> None:
+def update_model_stats(
+    stats: dict[str, list[RunningStat]],
+    labels: Counter[str],
+    label: str,
+    features: list[float],
+) -> None:
     if label not in stats:
         return
     labels[label] += 1
@@ -497,7 +563,13 @@ def learn_model(
             update_model_stats(stats, labels, label, features)
             source_labels[label] += 1
             rows_used += 1
-        sources.append({"path": relative_path(path), "rows_used": rows_used, "label_counts": dict(source_labels)})
+        sources.append(
+            {
+                "path": relative_path(path),
+                "rows_used": rows_used,
+                "label_counts": dict(source_labels),
+            }
+        )
 
     if include_generated:
         for path in generated_export_paths():
@@ -508,7 +580,13 @@ def learn_model(
                 source_labels[label] += 1
                 rows_used += 1
             if rows_used:
-                sources.append({"path": relative_path(path), "rows_used": rows_used, "label_counts": dict(source_labels)})
+                sources.append(
+                    {
+                        "path": relative_path(path),
+                        "rows_used": rows_used,
+                        "label_counts": dict(source_labels),
+                    }
+                )
 
     total_rows = sum(labels.values())
     if total_rows == 0 or labels["0"] == 0 or labels["1"] == 0:
@@ -536,7 +614,14 @@ def learn_model(
         "top_indicators": top_indicators[:12],
     }
     write_json(MODEL_PATH, model)
-    cache_artifact("learn", {"model_path": relative_path(MODEL_PATH), "rows_learned": total_rows, "sources": sources})
+    cache_artifact(
+        "learn",
+        {
+            "model_path": relative_path(MODEL_PATH),
+            "rows_learned": total_rows,
+            "sources": sources,
+        },
+    )
     return model
 
 
@@ -547,8 +632,12 @@ def rank_indicators(label_payload: dict[str, Any]) -> list[dict[str, Any]]:
     for index, name in enumerate(FEATURE_NAMES):
         normal = normal_stats[index]
         attack = attack_stats[index]
-        pooled_std = math.sqrt((float(normal["variance"]) + float(attack["variance"])) / 2.0)
-        score = abs(float(attack["mean"]) - float(normal["mean"])) / max(pooled_std, 1e-6)
+        pooled_std = math.sqrt(
+            (float(normal["variance"]) + float(attack["variance"])) / 2.0
+        )
+        score = abs(float(attack["mean"]) - float(normal["mean"])) / max(
+            pooled_std, 1e-6
+        )
         rows.append(
             {
                 "feature": name,
@@ -570,7 +659,11 @@ def load_or_learn_model(auto_learn: bool = True) -> dict[str, Any]:
     return learn_model(limit=None)
 
 
-def gaussian_log_probability(features: list[float], label_model: dict[str, Any], indicator_names: set[str] | None = None) -> float:
+def gaussian_log_probability(
+    features: list[float],
+    label_model: dict[str, Any],
+    indicator_names: set[str] | None = None,
+) -> float:
     logp = math.log(max(float(label_model["prior"]), 1e-12))
     for index, value in enumerate(features):
         name = FEATURE_NAMES[index]
@@ -585,9 +678,15 @@ def gaussian_log_probability(features: list[float], label_model: dict[str, Any],
 
 
 def score_row(model: dict[str, Any], features: list[float]) -> dict[str, Any]:
-    indicator_names = {item["feature"] for item in model.get("top_indicators", [])[:16]} or None
-    normal_log = gaussian_log_probability(features, model["labels"]["0"], indicator_names)
-    attack_log = gaussian_log_probability(features, model["labels"]["1"], indicator_names)
+    indicator_names = {
+        item["feature"] for item in model.get("top_indicators", [])[:16]
+    } or None
+    normal_log = gaussian_log_probability(
+        features, model["labels"]["0"], indicator_names
+    )
+    attack_log = gaussian_log_probability(
+        features, model["labels"]["1"], indicator_names
+    )
     delta = max(min(attack_log - normal_log, 60.0), -60.0)
     attack_probability = 1.0 / (1.0 + math.exp(-delta))
     predicted = "1" if attack_probability >= 0.5 else "0"
@@ -618,27 +717,57 @@ def risk_level(score: float) -> str:
     return "low"
 
 
-def classify_behavior(features: list[float], risk_score: float, model: dict[str, Any]) -> tuple[str, str]:
+def classify_behavior(
+    features: list[float], risk_score: float, model: dict[str, Any]
+) -> tuple[str, str]:
     values = feature_map(features)
     families: list[str] = []
     reasons: list[str] = []
 
-    if values["count"] >= 80 or values["srv_count"] >= 80 or values["serror_rate"] >= 0.5 or values["srv_serror_rate"] >= 0.5:
+    if (
+        values["count"] >= 80
+        or values["srv_count"] >= 80
+        or values["serror_rate"] >= 0.5
+        or values["srv_serror_rate"] >= 0.5
+    ):
         families.append("dos_flood")
         reasons.append("high connection or service-error rate")
-    if values["diff_srv_rate"] >= 0.35 or values["srv_diff_host_rate"] >= 0.35 or values["dst_host_srv_diff_host_rate"] >= 0.35:
+    if (
+        values["diff_srv_rate"] >= 0.35
+        or values["srv_diff_host_rate"] >= 0.35
+        or values["dst_host_srv_diff_host_rate"] >= 0.35
+    ):
         families.append("probe_scan")
         reasons.append("high service or host diversity")
-    if values["num_failed_logins"] > 0 or values["is_guest_login"] > 0 or values["logged_in"] == 0 and values["hot"] >= 2:
+    if (
+        values["num_failed_logins"] > 0
+        or values["is_guest_login"] > 0
+        or values["logged_in"] == 0
+        and values["hot"] >= 2
+    ):
         families.append("credential_abuse")
         reasons.append("login or credential anomaly")
-    if values["root_shell"] > 0 or values["su_attempted"] > 0 or values["num_compromised"] > 0 or values["num_root"] > 0:
+    if (
+        values["root_shell"] > 0
+        or values["su_attempted"] > 0
+        or values["num_compromised"] > 0
+        or values["num_root"] > 0
+    ):
         families.append("privilege_escalation")
         reasons.append("compromise or privilege signal")
-    if values["num_file_creations"] > 0 or values["num_shells"] > 0 or values["num_access_files"] > 0:
+    if (
+        values["num_file_creations"] > 0
+        or values["num_shells"] > 0
+        or values["num_access_files"] > 0
+    ):
         families.append("malware_like_activity")
         reasons.append("file, shell, or access-file behavior")
-    if values["wrong_fragment"] > 0 or values["urgent"] > 0 or values["src_bytes"] > 100000 or values["dst_bytes"] > 100000:
+    if (
+        values["wrong_fragment"] > 0
+        or values["urgent"] > 0
+        or values["src_bytes"] > 100000
+        or values["dst_bytes"] > 100000
+    ):
         families.append("payload_or_exfiltration")
         reasons.append("fragment, urgent, or high byte volume")
 
@@ -657,7 +786,9 @@ def classify_behavior(features: list[float], risk_score: float, model: dict[str,
                 reasons.append(f"{name} is {direction} versus normal profile")
         families.append("network_attack")
 
-    return families[0], "; ".join(reasons[:4]) if reasons else "matches learned attack profile"
+    return families[0], "; ".join(
+        reasons[:4]
+    ) if reasons else "matches learned attack profile"
 
 
 def summarize_dataset(path: Path, limit: int | None = None) -> dict[str, Any]:
@@ -722,7 +853,10 @@ def summarize_dataset_cached(path: Path) -> dict[str, Any]:
 
 
 def summarize_all_datasets() -> dict[str, Any]:
-    return {"train": summarize_dataset_cached(TRAIN_CSV), "test": summarize_dataset_cached(TEST_CSV)}
+    return {
+        "train": summarize_dataset_cached(TRAIN_CSV),
+        "test": summarize_dataset_cached(TEST_CSV),
+    }
 
 
 def inspect_csv(path: Path, limit: int | None = 50000) -> dict[str, Any]:
@@ -768,7 +902,9 @@ def inspect_csv(path: Path, limit: int | None = 50000) -> dict[str, Any]:
     for index, counter in enumerate(column_counters[:20]):
         top_values.append(
             {
-                "column": field_names[index] if index < len(field_names) else f"column_{index}",
+                "column": field_names[index]
+                if index < len(field_names)
+                else f"column_{index}",
                 "top": counter.most_common(8),
             }
         )
@@ -855,7 +991,9 @@ def analyze_csv(
                     malformed += 1
                     continue
                 label = row[0].strip()
-                features = [safe_float(value) for value in row[1 : len(FEATURE_NAMES) + 1]]
+                features = [
+                    safe_float(value) for value in row[1 : len(FEATURE_NAMES) + 1]
+                ]
                 result = score_row(model, features)
                 total += 1
                 actual_counts[label] += 1
@@ -942,7 +1080,11 @@ def analyze_csv(
 def latest_export_summary() -> dict[str, Any] | None:
     if not EXPORTS_DIR.exists():
         return None
-    summaries = sorted(EXPORTS_DIR.glob("traffic_analysis_*.json"), key=lambda item: item.stat().st_mtime, reverse=True)
+    summaries = sorted(
+        EXPORTS_DIR.glob("traffic_analysis_*.json"),
+        key=lambda item: item.stat().st_mtime,
+        reverse=True,
+    )
     if not summaries:
         return None
     return read_json(summaries[0])
@@ -952,7 +1094,9 @@ def list_reports(limit: int | None = 20) -> list[dict[str, Any]]:
     if not EXPORTS_DIR.exists():
         return []
     reports = []
-    for path in sorted(EXPORTS_DIR.glob("*"), key=lambda item: item.stat().st_mtime, reverse=True):
+    for path in sorted(
+        EXPORTS_DIR.glob("*"), key=lambda item: item.stat().st_mtime, reverse=True
+    ):
         if not path.is_file():
             continue
         reports.append(
@@ -960,7 +1104,9 @@ def list_reports(limit: int | None = 20) -> list[dict[str, Any]]:
                 "name": path.name,
                 "path": relative_path(path),
                 "size_kb": round(path.stat().st_size / 1024, 2),
-                "modified": datetime.fromtimestamp(path.stat().st_mtime).isoformat(timespec="seconds"),
+                "modified": datetime.fromtimestamp(path.stat().st_mtime).isoformat(
+                    timespec="seconds"
+                ),
             }
         )
         if limit is not None and len(reports) >= limit:
@@ -971,13 +1117,19 @@ def list_reports(limit: int | None = 20) -> list[dict[str, Any]]:
 def list_cache_artifacts(limit: int = 40) -> list[dict[str, Any]]:
     ensure_product_dirs()
     artifacts = []
-    for path in sorted(COMMAND_CACHE_DIR.glob("*.json"), key=lambda item: item.stat().st_mtime, reverse=True):
+    for path in sorted(
+        COMMAND_CACHE_DIR.glob("*.json"),
+        key=lambda item: item.stat().st_mtime,
+        reverse=True,
+    ):
         artifacts.append(
             {
                 "name": path.name,
                 "path": relative_path(path),
                 "size_kb": round(path.stat().st_size / 1024, 2),
-                "modified": datetime.fromtimestamp(path.stat().st_mtime).isoformat(timespec="seconds"),
+                "modified": datetime.fromtimestamp(path.stat().st_mtime).isoformat(
+                    timespec="seconds"
+                ),
             }
         )
         if limit is not None and len(artifacts) >= limit:
@@ -1003,9 +1155,15 @@ def show_cache(json_output: bool = False, limit: int = 40) -> None:
         print("No command cache artifacts yet.")
         return
     print()
-    print(table(["Name", "Path", "Size KB", "Modified"], [
-        [item["name"], item["path"], item["size_kb"], item["modified"]] for item in payload["artifacts"]
-    ]))
+    print(
+        table(
+            ["Name", "Path", "Size KB", "Modified"],
+            [
+                [item["name"], item["path"], item["size_kb"], item["modified"]]
+                for item in payload["artifacts"]
+            ],
+        )
+    )
 
 
 def list_run_summaries(limit: int | None = 8) -> list[dict[str, Any]]:
@@ -1013,7 +1171,11 @@ def list_run_summaries(limit: int | None = 8) -> list[dict[str, Any]]:
     if not runs_dir.exists():
         return []
     rows = []
-    for path in sorted(runs_dir.glob("*/summary.json"), key=lambda item: item.stat().st_mtime, reverse=True):
+    for path in sorted(
+        runs_dir.glob("*/summary.json"),
+        key=lambda item: item.stat().st_mtime,
+        reverse=True,
+    ):
         payload = read_json(path)
         if payload:
             rows.append(payload)
@@ -1024,7 +1186,9 @@ def list_run_summaries(limit: int | None = 8) -> list[dict[str, Any]]:
 
 def show_dataset_catalog(json_output: bool = False) -> None:
     payload = {
-        "local_sources": [relative_path(path) for path in all_csv_sources(include_exports=False)],
+        "local_sources": [
+            relative_path(path) for path in all_csv_sources(include_exports=False)
+        ],
         "external_catalog": EXTERNAL_DATASETS,
     }
     cache_artifact("datasets", payload)
@@ -1032,13 +1196,25 @@ def show_dataset_catalog(json_output: bool = False) -> None:
         print_json(payload)
         return
     section("Dataset Catalog")
-    print(table(["ID", "Name", "Source", "Format"], [
-        [item["id"], item["name"], item["source"], item["format"]] for item in EXTERNAL_DATASETS
-    ]))
+    print(
+        table(
+            ["ID", "Name", "Source", "Format"],
+            [
+                [item["id"], item["name"], item["source"], item["format"]]
+                for item in EXTERNAL_DATASETS
+            ],
+        )
+    )
     print()
-    print(table(["Local CSV", "Size MB"], [
-        [relative_path(path), round(path.stat().st_size / (1024 * 1024), 2)] for path in all_csv_sources(include_exports=False)
-    ]))
+    print(
+        table(
+            ["Local CSV", "Size MB"],
+            [
+                [relative_path(path), round(path.stat().st_size / (1024 * 1024), 2)]
+                for path in all_csv_sources(include_exports=False)
+            ],
+        )
+    )
 
 
 def import_csv(source: Path, name: str | None = None) -> Path:
@@ -1054,17 +1230,31 @@ def import_csv(source: Path, name: str | None = None) -> Path:
     if source.resolve() != target.resolve():
         shutil.copy2(source, target)
     inspect_csv(target, limit=None)
-    cache_artifact("import", {"source": str(source), "target": relative_path(target), "bytes": target.stat().st_size})
+    cache_artifact(
+        "import",
+        {
+            "source": str(source),
+            "target": relative_path(target),
+            "bytes": target.stat().st_size,
+        },
+    )
     return target
 
 
-def download_url(url: str, name: str | None = None, max_bytes: int = 2 * 1024 * 1024 * 1024) -> Path:
+def download_url(
+    url: str, name: str | None = None, max_bytes: int = 2 * 1024 * 1024 * 1024
+) -> Path:
     ensure_product_dirs()
-    parsed_name = name or Path(url.split("?", 1)[0]).name or f"download_{compact_timestamp()}"
+    parsed_name = (
+        name or Path(url.split("?", 1)[0]).name or f"download_{compact_timestamp()}"
+    )
     safe_name = re.sub(r"[^A-Za-z0-9_.-]+", "_", parsed_name)
     target = IMPORTS_DIR / safe_name
     try:
-        with urllib.request.urlopen(url, timeout=60) as response, target.open("wb") as handle:
+        with (
+            urllib.request.urlopen(url, timeout=60) as response,
+            target.open("wb") as handle,
+        ):
             copied = 0
             while True:
                 chunk = response.read(1024 * 1024)
@@ -1077,12 +1267,18 @@ def download_url(url: str, name: str | None = None, max_bytes: int = 2 * 1024 * 
     except Exception:
         target.unlink(missing_ok=True)
         raise
-    cache_artifact("download", {"url": url, "path": relative_path(target), "bytes": target.stat().st_size})
+    cache_artifact(
+        "download",
+        {"url": url, "path": relative_path(target), "bytes": target.stat().st_size},
+    )
     return target
 
 
 def show_import(path: Path, json_output: bool = False) -> None:
-    payload = {"imported_path": relative_path(path), "inspection": inspect_csv(path, limit=None)}
+    payload = {
+        "imported_path": relative_path(path),
+        "inspection": inspect_csv(path, limit=None),
+    }
     if json_output:
         print_json(payload)
         return
@@ -1091,24 +1287,49 @@ def show_import(path: Path, json_output: bool = False) -> None:
     show_index(path, json_output=False)
 
 
-def show_index(path: Path, json_output: bool = False, limit: int | None = 50000) -> None:
+def show_index(
+    path: Path, json_output: bool = False, limit: int | None = 50000
+) -> None:
     payload = inspect_csv(path, limit=limit)
     if json_output:
         print_json(payload)
         return
     section("CSV Index")
     print(f"Path: {payload['path']}")
-    print(f"Rows scanned: {payload['rows_scanned']:,} | columns: {payload['columns']} | size: {payload['size_mb']} MB")
-    print(f"Header: {payload['has_header']} | malformed rows: {payload['malformed_rows']:,}")
+    print(
+        f"Rows scanned: {payload['rows_scanned']:,} | columns: {payload['columns']} | size: {payload['size_mb']} MB"
+    )
+    print(
+        f"Header: {payload['has_header']} | malformed rows: {payload['malformed_rows']:,}"
+    )
     if payload["label_counts_first_column"]:
         print()
-        print(table(["First Column Value", "Rows"], [
-            [label, count] for label, count in sorted(payload["label_counts_first_column"].items(), key=lambda item: item[1], reverse=True)[:12]
-        ]))
+        print(
+            table(
+                ["First Column Value", "Rows"],
+                [
+                    [label, count]
+                    for label, count in sorted(
+                        payload["label_counts_first_column"].items(),
+                        key=lambda item: item[1],
+                        reverse=True,
+                    )[:12]
+                ],
+            )
+        )
     print()
-    print(table(["Column", "Top Values"], [
-        [item["column"], ", ".join(f"{value}:{count}" for value, count in item["top"][:5])] for item in payload["top_values"][:12]
-    ]))
+    print(
+        table(
+            ["Column", "Top Values"],
+            [
+                [
+                    item["column"],
+                    ", ".join(f"{value}:{count}" for value, count in item["top"][:5]),
+                ]
+                for item in payload["top_values"][:12]
+            ],
+        )
+    )
 
 
 def load_services() -> dict[int, str]:
@@ -1135,8 +1356,18 @@ def load_services() -> dict[int, str]:
         9200: "elasticsearch",
         27017: "mongodb",
     }
-    services_file = Path(os.environ.get("SystemRoot", "C:\\Windows")) / "System32" / "drivers" / "etc" / "services"
-    if services_file.exists():
+    service_files = [Path("/etc/services")]
+    if os.name == "nt":
+        service_files.append(
+            Path(os.environ.get("SystemRoot", "C:\\Windows"))
+            / "System32"
+            / "drivers"
+            / "etc"
+            / "services"
+        )
+    for services_file in service_files:
+        if not services_file.exists():
+            continue
         with services_file.open("r", encoding="utf-8", errors="ignore") as handle:
             for line in handle:
                 line = line.strip()
@@ -1192,12 +1423,11 @@ def split_host_port(value: str) -> tuple[str, int | None]:
     return value, None
 
 
-def parse_netstat() -> list[dict[str, Any]]:
-    try:
-        completed = subprocess.run(["netstat", "-ano"], capture_output=True, text=True, timeout=15, check=False)
-    except FileNotFoundError:
-        return []
-    rows = []
+def parse_windows_netstat() -> list[dict[str, Any]]:
+    completed = subprocess.run(
+        ["netstat", "-ano"], capture_output=True, text=True, timeout=15, check=False
+    )
+    rows: list[dict[str, Any]] = []
     for line in completed.stdout.splitlines():
         parts = line.split()
         if not parts or parts[0] not in {"TCP", "UDP"}:
@@ -1237,12 +1467,58 @@ def parse_netstat() -> list[dict[str, Any]]:
     return rows
 
 
-def show_netstat(json_output: bool = False, only_listening: bool = False, limit: int = 40) -> None:
+def parse_unix_ss() -> list[dict[str, Any]]:
+    completed = subprocess.run(
+        ["ss", "-tunlpH"], capture_output=True, text=True, timeout=15, check=False
+    )
+    rows: list[dict[str, Any]] = []
+    for line in completed.stdout.splitlines():
+        parts = line.split()
+        if len(parts) < 5:
+            continue
+        proto = parts[0].upper()
+        state = parts[1].upper() if proto == "TCP" else "UDP"
+        local = parts[4]
+        remote = parts[5] if len(parts) > 5 else "*:*"
+        local_host, local_port = split_host_port(local)
+        remote_host, remote_port = split_host_port(remote)
+        process_text = " ".join(parts[6:])
+        pid_match = re.search(r"pid=(\d+)", process_text)
+        rows.append(
+            {
+                "proto": proto,
+                "local": local,
+                "local_host": local_host,
+                "local_port": local_port,
+                "remote": remote,
+                "remote_host": remote_host,
+                "remote_port": remote_port,
+                "state": state,
+                "pid": pid_match.group(1) if pid_match else "",
+            }
+        )
+    return rows
+
+
+def parse_netstat() -> list[dict[str, Any]]:
+    try:
+        if os.name == "nt":
+            return parse_windows_netstat()
+        return parse_unix_ss()
+    except FileNotFoundError:
+        return []
+
+
+def show_netstat(
+    json_output: bool = False, only_listening: bool = False, limit: int = 40
+) -> None:
     services = load_services()
     rows = parse_netstat()
     if only_listening:
         rows = [row for row in rows if row["state"] in {"LISTENING", "UDP"}]
-    rows = sorted(rows, key=lambda item: (item.get("local_port") or 0, item["proto"], item["pid"]))
+    rows = sorted(
+        rows, key=lambda item: (item.get("local_port") or 0, item["proto"], item["pid"])
+    )
     payload = rows[:limit]
     cache_artifact("ports" if only_listening else "netstat", payload)
     if json_output:
@@ -1252,17 +1528,22 @@ def show_netstat(json_output: bool = False, only_listening: bool = False, limit:
     if not payload:
         print("No netstat rows found.")
         return
-    print(table(["Proto", "Local", "Service", "Remote", "State", "PID"], [
-        [
-            row["proto"],
-            row["local"],
-            services.get(row.get("local_port") or -1, ""),
-            row["remote"],
-            row["state"],
-            row["pid"],
-        ]
-        for row in payload
-    ]))
+    print(
+        table(
+            ["Proto", "Local", "Service", "Remote", "State", "PID"],
+            [
+                [
+                    row["proto"],
+                    row["local"],
+                    services.get(row.get("local_port") or -1, ""),
+                    row["remote"],
+                    row["state"],
+                    row["pid"],
+                ]
+                for row in payload
+            ],
+        )
+    )
 
 
 def show_port(port: int, json_output: bool = False) -> None:
@@ -1270,8 +1551,13 @@ def show_port(port: int, json_output: bool = False) -> None:
     payload = {
         "port": port,
         "service": services.get(port, "unknown"),
-        "risk": COMMON_PORT_RISKS.get(port, "No specific built-in note. Validate whether this service should be exposed."),
-        "local_matches": [row for row in parse_netstat() if row.get("local_port") == port],
+        "risk": COMMON_PORT_RISKS.get(
+            port,
+            "No specific built-in note. Validate whether this service should be exposed.",
+        ),
+        "local_matches": [
+            row for row in parse_netstat() if row.get("local_port") == port
+        ],
     }
     cache_artifact("port", payload)
     if json_output:
@@ -1282,12 +1568,26 @@ def show_port(port: int, json_output: bool = False) -> None:
     print(f"Risk: {payload['risk']}")
     if payload["local_matches"]:
         print()
-        print(table(["Proto", "Local", "Remote", "State", "PID"], [
-            [row["proto"], row["local"], row["remote"], row["state"], row["pid"]] for row in payload["local_matches"]
-        ]))
+        print(
+            table(
+                ["Proto", "Local", "Remote", "State", "PID"],
+                [
+                    [
+                        row["proto"],
+                        row["local"],
+                        row["remote"],
+                        row["state"],
+                        row["pid"],
+                    ]
+                    for row in payload["local_matches"]
+                ],
+            )
+        )
 
 
-def probe_ports(host: str, ports: list[int], timeout_seconds: float = 0.2) -> list[dict[str, Any]]:
+def probe_ports(
+    host: str, ports: list[int], timeout_seconds: float = 0.2
+) -> list[dict[str, Any]]:
     results = []
     services = load_services()
     for port in ports:
@@ -1299,7 +1599,15 @@ def probe_ports(host: str, ports: list[int], timeout_seconds: float = 0.2) -> li
         except (TimeoutError, OSError):
             status = "closed"
         elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
-        results.append({"host": host, "port": port, "service": services.get(port, ""), "status": status, "elapsed_ms": elapsed_ms})
+        results.append(
+            {
+                "host": host,
+                "port": port,
+                "service": services.get(port, ""),
+                "status": status,
+                "elapsed_ms": elapsed_ms,
+            }
+        )
     return results
 
 
@@ -1312,9 +1620,21 @@ def show_probe(host: str, ports_text: str, json_output: bool = False) -> None:
         return
     section("Port Probe")
     print("Use only on systems and networks you own or are authorized to test.")
-    print(table(["Host", "Port", "Service", "Status", "ms"], [
-        [item["host"], item["port"], item["service"], item["status"], item["elapsed_ms"]] for item in payload
-    ]))
+    print(
+        table(
+            ["Host", "Port", "Service", "Status", "ms"],
+            [
+                [
+                    item["host"],
+                    item["port"],
+                    item["service"],
+                    item["status"],
+                    item["elapsed_ms"],
+                ]
+                for item in payload
+            ],
+        )
+    )
 
 
 def show_dns(host: str, json_output: bool = False) -> None:
@@ -1335,7 +1655,13 @@ def show_dns(host: str, json_output: bool = False) -> None:
             reverse.append(socket.gethostbyaddr(address)[0])
         except OSError:
             pass
-    payload = {"host": host, "canonical": name, "aliases": aliases, "addresses": addresses, "reverse": reverse}
+    payload = {
+        "host": host,
+        "canonical": name,
+        "aliases": aliases,
+        "addresses": addresses,
+        "reverse": reverse,
+    }
     cache_artifact("dns", payload)
     if json_output:
         print_json(payload)
@@ -1344,13 +1670,48 @@ def show_dns(host: str, json_output: bool = False) -> None:
     print_json(payload)
 
 
-def show_processes(json_output: bool = False, limit: int = 40) -> None:
-    rows: list[dict[str, Any]] = []
-    try:
-        completed = subprocess.run(["tasklist", "/FO", "CSV"], capture_output=True, text=True, timeout=15, check=False)
+def list_processes() -> list[dict[str, str]]:
+    if os.name == "nt":
+        completed = subprocess.run(
+            ["tasklist", "/FO", "CSV"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
         reader = csv.DictReader(completed.stdout.splitlines())
-        for row in reader:
-            rows.append(row)
+        return [
+            {
+                "image": row.get("Image Name", ""),
+                "pid": row.get("PID", ""),
+                "session": row.get("Session Name", ""),
+                "memory": row.get("Mem Usage", ""),
+            }
+            for row in reader
+        ]
+
+    completed = subprocess.run(
+        ["ps", "-eo", "pid=,comm=,args="],
+        capture_output=True,
+        text=True,
+        timeout=15,
+        check=False,
+    )
+    rows: list[dict[str, str]] = []
+    for line in completed.stdout.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        pid, command, args = (stripped.split(maxsplit=2) + ["", ""])[:3]
+        rows.append(
+            {"image": command, "pid": pid, "session": "", "memory": "", "args": args}
+        )
+    return rows
+
+
+def show_processes(json_output: bool = False, limit: int = 40) -> None:
+    try:
+        rows = list_processes()
     except FileNotFoundError:
         rows = []
     cache_artifact("ps", rows[:limit])
@@ -1361,10 +1722,20 @@ def show_processes(json_output: bool = False, limit: int = 40) -> None:
     if not rows:
         print("No process rows found.")
         return
-    print(table(["Image", "PID", "Session", "Memory"], [
-        [row.get("Image Name", ""), row.get("PID", ""), row.get("Session Name", ""), row.get("Mem Usage", "")]
-        for row in rows[:limit]
-    ]))
+    print(
+        table(
+            ["Image", "PID", "Session", "Memory"],
+            [
+                [
+                    row.get("image", ""),
+                    row.get("pid", ""),
+                    row.get("session", ""),
+                    row.get("memory", ""),
+                ]
+                for row in rows[:limit]
+            ],
+        )
+    )
 
 
 def hash_file(path: Path) -> dict[str, Any]:
@@ -1489,7 +1860,9 @@ def remove_ioc(ioc_id: str) -> bool:
     return removed
 
 
-def search_text_files(pattern: str, paths: list[Path], limit: int = 50) -> list[dict[str, Any]]:
+def search_text_files(
+    pattern: str, paths: list[Path], limit: int = 50
+) -> list[dict[str, Any]]:
     results = []
     lowered = pattern.lower()
     for path in paths:
@@ -1503,10 +1876,18 @@ def search_text_files(pattern: str, paths: list[Path], limit: int = 50) -> list[
         except OSError:
             continue
         try:
-            with path.open("r", encoding="utf-8", errors="ignore", newline="") as handle:
+            with path.open(
+                "r", encoding="utf-8", errors="ignore", newline=""
+            ) as handle:
                 for line_number, line in enumerate(handle, start=1):
                     if lowered in line.lower():
-                        results.append({"path": relative_path(path), "line": line_number, "text": line.strip()[:240]})
+                        results.append(
+                            {
+                                "path": relative_path(path),
+                                "line": line_number,
+                                "text": line.strip()[:240],
+                            }
+                        )
                         if len(results) >= limit:
                             return results
         except OSError:
@@ -1514,9 +1895,14 @@ def search_text_files(pattern: str, paths: list[Path], limit: int = 50) -> list[
     return results
 
 
-def show_hunt(pattern: str, path: Path | None = None, json_output: bool = False, limit: int = 50) -> None:
+def show_hunt(
+    pattern: str, path: Path | None = None, json_output: bool = False, limit: int = 50
+) -> None:
     paths = [path] if path else all_csv_sources(include_exports=True)
-    payload = {"pattern": pattern, "matches": search_text_files(pattern, paths, limit=limit)}
+    payload = {
+        "pattern": pattern,
+        "matches": search_text_files(pattern, paths, limit=limit),
+    }
     cache_artifact("hunt", payload)
     if json_output:
         print_json(payload)
@@ -1525,7 +1911,12 @@ def show_hunt(pattern: str, path: Path | None = None, json_output: bool = False,
     if not payload["matches"]:
         print("No matches.")
         return
-    print(table(["Path", "Line", "Text"], [[item["path"], item["line"], item["text"]] for item in payload["matches"]]))
+    print(
+        table(
+            ["Path", "Line", "Text"],
+            [[item["path"], item["line"], item["text"]] for item in payload["matches"]],
+        )
+    )
 
 
 def show_ioc(args: list[str], json_output: bool = False) -> None:
@@ -1540,13 +1931,26 @@ def show_ioc(args: list[str], json_output: bool = False) -> None:
         if not payload:
             print("No IOCs stored.")
             return
-        print(table(["ID", "Type", "Value", "Note"], [[item["id"], item["type"], item["value"], item.get("note", "")] for item in payload]))
+        print(
+            table(
+                ["ID", "Type", "Value", "Note"],
+                [
+                    [item["id"], item["type"], item["value"], item.get("note", "")]
+                    for item in payload
+                ],
+            )
+        )
         return
     if action == "add":
         if len(args) < 2:
             raise ValueError("usage: ioc add <value> [type] [note]")
         value = args[1]
-        ioc_type = args[2] if len(args) >= 3 and args[2] in {"ip", "domain", "hash", "port", "string", "malware"} else None
+        ioc_type = (
+            args[2]
+            if len(args) >= 3
+            and args[2] in {"ip", "domain", "hash", "port", "string", "malware"}
+            else None
+        )
         note_start = 3 if ioc_type else 2
         payload = add_ioc(value, ioc_type, " ".join(args[note_start:]))
         if json_output:
@@ -1564,7 +1968,9 @@ def show_ioc(args: list[str], json_output: bool = False) -> None:
         iocs = read_iocs()
         matches = []
         for item in iocs:
-            found = search_text_files(str(item["value"]), all_csv_sources(include_exports=True), limit=20)
+            found = search_text_files(
+                str(item["value"]), all_csv_sources(include_exports=True), limit=20
+            )
             if found:
                 matches.append({"ioc": item, "matches": found})
         cache_artifact("ioc_hunt", matches)
@@ -1578,7 +1984,14 @@ def show_ioc(args: list[str], json_output: bool = False) -> None:
         rows = []
         for bundle in matches:
             for match in bundle["matches"]:
-                rows.append([bundle["ioc"]["value"], match["path"], match["line"], match["text"]])
+                rows.append(
+                    [
+                        bundle["ioc"]["value"],
+                        match["path"],
+                        match["line"],
+                        match["text"],
+                    ]
+                )
         print(table(["IOC", "Path", "Line", "Text"], rows[:80]))
         return
     raise ValueError("ioc actions: list, add, remove, hunt")
@@ -1612,14 +2025,20 @@ def shell_ls(path_text: str | None = None, all_files: bool = False) -> None:
         print(relative_path(path))
         return
     rows = []
-    for child in sorted(path.iterdir(), key=lambda item: (item.is_file(), item.name.lower())):
+    for child in sorted(
+        path.iterdir(), key=lambda item: (item.is_file(), item.name.lower())
+    ):
         if not all_files and child.name.startswith("."):
             continue
-        rows.append([
-            child.name + ("/" if child.is_dir() else ""),
-            "dir" if child.is_dir() else child.stat().st_size,
-            datetime.fromtimestamp(child.stat().st_mtime).isoformat(timespec="seconds"),
-        ])
+        rows.append(
+            [
+                child.name + ("/" if child.is_dir() else ""),
+                "dir" if child.is_dir() else child.stat().st_size,
+                datetime.fromtimestamp(child.stat().st_mtime).isoformat(
+                    timespec="seconds"
+                ),
+            ]
+        )
     print(table(["Name", "Size", "Modified"], rows))
 
 
@@ -1656,21 +2075,34 @@ def shell_tail(path_text: str, lines: int = 20) -> None:
 
 def shell_grep(pattern: str, path_text: str | None = None, limit: int = 50) -> None:
     path = shell_path(path_text or ".")
-    paths = [path] if path.is_file() else [item for item in path.rglob("*") if item.is_file()]
+    paths = (
+        [path]
+        if path.is_file()
+        else [item for item in path.rglob("*") if item.is_file()]
+    )
     matches = search_text_files(pattern, paths, limit=limit)
     if not matches:
         print("No matches.")
         return
-    print(table(["Path", "Line", "Text"], [[item["path"], item["line"], item["text"]] for item in matches]))
+    print(
+        table(
+            ["Path", "Line", "Text"],
+            [[item["path"], item["line"], item["text"]] for item in matches],
+        )
+    )
 
 
-def shell_find(pattern: str = "*", path_text: str | None = None, limit: int = 200) -> None:
+def shell_find(
+    pattern: str = "*", path_text: str | None = None, limit: int = 200
+) -> None:
     root = shell_path(path_text or ".")
     rows = []
     iterator = root.rglob("*") if root.is_dir() else [root]
     for item in iterator:
         if fnmatch.fnmatch(item.name.lower(), pattern.lower()):
-            rows.append([relative_path(item), "dir" if item.is_dir() else item.stat().st_size])
+            rows.append(
+                [relative_path(item), "dir" if item.is_dir() else item.stat().st_size]
+            )
             if len(rows) >= limit:
                 break
     print(table(["Path", "Size"], rows))
@@ -1684,7 +2116,12 @@ def shell_wc(path_text: str) -> None:
             lines += 1
             words += len(line.split())
             chars += len(line)
-    print(table(["Lines", "Words", "Chars", "Path"], [[lines, words, chars, relative_path(path)]]))
+    print(
+        table(
+            ["Lines", "Words", "Chars", "Path"],
+            [[lines, words, chars, relative_path(path)]],
+        )
+    )
 
 
 def shell_du(path_text: str | None = None) -> None:
@@ -1693,7 +2130,12 @@ def shell_du(path_text: str | None = None) -> None:
         size = path.stat().st_size
     else:
         size = sum(item.stat().st_size for item in path.rglob("*") if item.is_file())
-    print(table(["Path", "Bytes", "MB"], [[relative_path(path) or ".", size, round(size / (1024 * 1024), 2)]]))
+    print(
+        table(
+            ["Path", "Bytes", "MB"],
+            [[relative_path(path) or ".", size, round(size / (1024 * 1024), 2)]],
+        )
+    )
 
 
 def shell_stat(path_text: str) -> None:
@@ -1704,8 +2146,12 @@ def shell_stat(path_text: str) -> None:
             "path": relative_path(path),
             "type": "directory" if path.is_dir() else "file",
             "bytes": stat.st_size,
-            "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(timespec="seconds"),
-            "created": datetime.fromtimestamp(stat.st_ctime).isoformat(timespec="seconds"),
+            "modified": datetime.fromtimestamp(stat.st_mtime).isoformat(
+                timespec="seconds"
+            ),
+            "created": datetime.fromtimestamp(stat.st_ctime).isoformat(
+                timespec="seconds"
+            ),
         }
     )
 
@@ -1747,25 +2193,44 @@ def show_status(json_output: bool = False) -> None:
                 percent(item["label_counts"].get("1", 0), item["rows"]),
             ]
         )
-    print(table(["Set", "Path", "Rows", "Size", "Normal", "Attack", "Attack Share"], dataset_rows))
+    print(
+        table(
+            ["Set", "Path", "Rows", "Size", "Normal", "Attack", "Attack Share"],
+            dataset_rows,
+        )
+    )
 
     section("Self-Learning Model")
     model = payload["model"]
     if not model:
         print("No model yet. Run: learn")
     else:
-        print(f"Model: {model['model_type']} | rows learned: {model['total_rows']:,} | created: {model['created_at']}")
-        print(table(["Indicator", "Separation", "Normal Mean", "Attack Mean"], [
-            [item["feature"], item["separation"], item["normal_mean"], item["attack_mean"]]
-            for item in model.get("top_indicators", [])[:6]
-        ]))
+        print(
+            f"Model: {model['model_type']} | rows learned: {model['total_rows']:,} | created: {model['created_at']}"
+        )
+        print(
+            table(
+                ["Indicator", "Separation", "Normal Mean", "Attack Mean"],
+                [
+                    [
+                        item["feature"],
+                        item["separation"],
+                        item["normal_mean"],
+                        item["attack_mean"],
+                    ]
+                    for item in model.get("top_indicators", [])[:6]
+                ],
+            )
+        )
 
     latest = payload["latest_export"]
     section("Latest Downloadable Analysis")
     if latest:
         print(f"CSV:  {latest['export_csv']}")
         print(f"JSON: {latest['export_json']}")
-        print(f"Rows: {latest['rows_analyzed']:,} | average risk: {latest['average_risk_score']:.4f}")
+        print(
+            f"Rows: {latest['rows_analyzed']:,} | average risk: {latest['average_risk_score']:.4f}"
+        )
     else:
         print("No analysis export yet. Run: scan")
 
@@ -1787,10 +2252,24 @@ def show_traffic(json_output: bool = False) -> None:
                 f"{item['size_mb']} MB",
                 item["total_src_bytes"],
                 item["total_dst_bytes"],
-                ", ".join(f"{value}:{count}" for value, count in item["top_protocols"][:3]),
+                ", ".join(
+                    f"{value}:{count}" for value, count in item["top_protocols"][:3]
+                ),
             ]
         )
-    print(table(["Set", "Rows", "Size", "Source Bytes", "Dest Bytes", "Top Encoded Protocols"], rows))
+    print(
+        table(
+            [
+                "Set",
+                "Rows",
+                "Size",
+                "Source Bytes",
+                "Dest Bytes",
+                "Top Encoded Protocols",
+            ],
+            rows,
+        )
+    )
 
     section("Top Encoded Services And Flags")
     rows = []
@@ -1798,7 +2277,9 @@ def show_traffic(json_output: bool = False) -> None:
         rows.append(
             [
                 name,
-                ", ".join(f"{value}:{count}" for value, count in item["top_services"][:5]),
+                ", ".join(
+                    f"{value}:{count}" for value, count in item["top_services"][:5]
+                ),
                 ", ".join(f"{value}:{count}" for value, count in item["top_flags"][:5]),
             ]
         )
@@ -1809,7 +2290,10 @@ def show_traffic(json_output: bool = False) -> None:
 def show_attacks(json_output: bool = False) -> None:
     datasets = summarize_all_datasets()
     model = read_json(MODEL_PATH)
-    payload = {"datasets": datasets, "model_indicators": model.get("top_indicators", []) if model else []}
+    payload = {
+        "datasets": datasets,
+        "model_indicators": model.get("top_indicators", []) if model else [],
+    }
     cache_artifact("attacks", payload)
     if json_output:
         print_json(payload)
@@ -1819,18 +2303,42 @@ def show_attacks(json_output: bool = False) -> None:
     rows = []
     for name, item in datasets.items():
         total = item["rows"]
-        rows.append([name, "normal", item["label_counts"].get("0", 0), percent(item["label_counts"].get("0", 0), total)])
-        rows.append([name, "attack", item["label_counts"].get("1", 0), percent(item["label_counts"].get("1", 0), total)])
+        rows.append(
+            [
+                name,
+                "normal",
+                item["label_counts"].get("0", 0),
+                percent(item["label_counts"].get("0", 0), total),
+            ]
+        )
+        rows.append(
+            [
+                name,
+                "attack",
+                item["label_counts"].get("1", 0),
+                percent(item["label_counts"].get("1", 0), total),
+            ]
+        )
     print(table(["Set", "Label", "Rows", "Share"], rows))
 
     section("Learned Attack Indicators")
     if not model:
         print("No learned model yet. Run: learn")
         return
-    print(table(["Feature", "Separation", "Normal Mean", "Attack Mean"], [
-        [item["feature"], item["separation"], item["normal_mean"], item["attack_mean"]]
-        for item in model.get("top_indicators", [])[:10]
-    ]))
+    print(
+        table(
+            ["Feature", "Separation", "Normal Mean", "Attack Mean"],
+            [
+                [
+                    item["feature"],
+                    item["separation"],
+                    item["normal_mean"],
+                    item["attack_mean"],
+                ]
+                for item in model.get("top_indicators", [])[:10]
+            ],
+        )
+    )
 
 
 def show_malware(json_output: bool = False, limit: int = 5000) -> None:
@@ -1852,11 +2360,29 @@ def show_malware(json_output: bool = False, limit: int = 5000) -> None:
 
     section("Malware-Like Behavior")
     print(payload["note"])
-    print(table(["Indicator", "Rows", "Share"], [
-        ["malware_like_activity", malware_like, percent(malware_like, summary["rows_analyzed"])],
-        ["privilege_escalation", privilege, percent(privilege, summary["rows_analyzed"])],
-    ]))
-    print(table(["Family", "Rows"], [[name, count] for name, count in sorted(summary["family_counts"].items())]))
+    print(
+        table(
+            ["Indicator", "Rows", "Share"],
+            [
+                [
+                    "malware_like_activity",
+                    malware_like,
+                    percent(malware_like, summary["rows_analyzed"]),
+                ],
+                [
+                    "privilege_escalation",
+                    privilege,
+                    percent(privilege, summary["rows_analyzed"]),
+                ],
+            ],
+        )
+    )
+    print(
+        table(
+            ["Family", "Rows"],
+            [[name, count] for name, count in sorted(summary["family_counts"].items())],
+        )
+    )
 
 
 def show_learn(model: dict[str, Any], json_output: bool = False) -> None:
@@ -1867,15 +2393,37 @@ def show_learn(model: dict[str, Any], json_output: bool = False) -> None:
     print(f"Model: {relative_path(MODEL_PATH)}")
     print(f"Rows learned: {model['total_rows']:,}")
     print(f"Created: {model['created_at']}")
-    print(table(["Source", "Rows", "Labels"], [
-        [item["path"], item["rows_used"], ", ".join(f"{label}:{count}" for label, count in item["label_counts"].items())]
-        for item in model["sources"]
-    ]))
+    print(
+        table(
+            ["Source", "Rows", "Labels"],
+            [
+                [
+                    item["path"],
+                    item["rows_used"],
+                    ", ".join(
+                        f"{label}:{count}"
+                        for label, count in item["label_counts"].items()
+                    ),
+                ]
+                for item in model["sources"]
+            ],
+        )
+    )
     print()
-    print(table(["Top Indicator", "Separation", "Normal Mean", "Attack Mean"], [
-        [item["feature"], item["separation"], item["normal_mean"], item["attack_mean"]]
-        for item in model["top_indicators"][:8]
-    ]))
+    print(
+        table(
+            ["Top Indicator", "Separation", "Normal Mean", "Attack Mean"],
+            [
+                [
+                    item["feature"],
+                    item["separation"],
+                    item["normal_mean"],
+                    item["attack_mean"],
+                ]
+                for item in model["top_indicators"][:8]
+            ],
+        )
+    )
 
 
 def show_scan(summary: dict[str, Any], json_output: bool = False) -> None:
@@ -1886,23 +2434,49 @@ def show_scan(summary: dict[str, Any], json_output: bool = False) -> None:
     print(f"Source: {summary['source_file']}")
     print(f"Rows analyzed: {summary['rows_analyzed']:,}")
     print(f"Average risk: {summary['average_risk_score']:.4f}")
-    print(table(["Prediction", "Rows", "Share"], [
-        [BINARY_LABELS.get(label, label), count, percent(count, summary["rows_analyzed"])]
-        for label, count in sorted(summary["predicted_counts"].items())
-    ]))
-    print(table(["Risk", "Rows"], [[name, count] for name, count in sorted(summary["risk_counts"].items())]))
-    print(table(["Family", "Rows"], [[name, count] for name, count in sorted(summary["family_counts"].items())]))
+    print(
+        table(
+            ["Prediction", "Rows", "Share"],
+            [
+                [
+                    BINARY_LABELS.get(label, label),
+                    count,
+                    percent(count, summary["rows_analyzed"]),
+                ]
+                for label, count in sorted(summary["predicted_counts"].items())
+            ],
+        )
+    )
+    print(
+        table(
+            ["Risk", "Rows"],
+            [[name, count] for name, count in sorted(summary["risk_counts"].items())],
+        )
+    )
+    print(
+        table(
+            ["Family", "Rows"],
+            [[name, count] for name, count in sorted(summary["family_counts"].items())],
+        )
+    )
     print()
-    print(table(["Accuracy", "Precision", "Recall", "F1", "TP", "TN", "FP", "FN"], [[
-        summary["metrics"]["accuracy"],
-        summary["metrics"]["precision"],
-        summary["metrics"]["recall"],
-        summary["metrics"]["f1"],
-        summary["metrics"]["tp"],
-        summary["metrics"]["tn"],
-        summary["metrics"]["fp"],
-        summary["metrics"]["fn"],
-    ]]))
+    print(
+        table(
+            ["Accuracy", "Precision", "Recall", "F1", "TP", "TN", "FP", "FN"],
+            [
+                [
+                    summary["metrics"]["accuracy"],
+                    summary["metrics"]["precision"],
+                    summary["metrics"]["recall"],
+                    summary["metrics"]["f1"],
+                    summary["metrics"]["tp"],
+                    summary["metrics"]["tn"],
+                    summary["metrics"]["fp"],
+                    summary["metrics"]["fn"],
+                ]
+            ],
+        )
+    )
     if summary.get("export_csv"):
         print()
         print(f"Downloadable CSV:  {summary['export_csv']}")
@@ -1919,9 +2493,15 @@ def show_reports(json_output: bool = False, limit: int | None = 20) -> None:
     if not reports:
         print("No product reports yet. Run: scan")
         return
-    print(table(["Name", "Path", "Size KB", "Modified"], [
-        [item["name"], item["path"], item["size_kb"], item["modified"]] for item in reports
-    ]))
+    print(
+        table(
+            ["Name", "Path", "Size KB", "Modified"],
+            [
+                [item["name"], item["path"], item["size_kb"], item["modified"]]
+                for item in reports
+            ],
+        )
+    )
 
 
 def show_runs(json_output: bool = False, limit: int | None = 10) -> None:
@@ -1950,39 +2530,102 @@ def show_runs(json_output: bool = False, limit: int | None = 10) -> None:
     print(table(["Run", "Kind", "Best Model", "Accuracy", "F1"], rows))
 
 
+def supports_color() -> bool:
+    return sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
+
+
+def colorize(text: str, color_code: str) -> str:
+    if not supports_color():
+        return text
+    return f"\033[{color_code}m{text}\033[0m"
+
+
+def print_startup_banner() -> None:
+    banner = r"""
+██╗██████╗ ███████╗    ███████╗███████╗███╗   ██╗████████╗██╗███╗   ██╗███████╗██╗
+██║██╔══██╗██╔════╝    ██╔════╝██╔════╝████╗  ██║╚══██╔══╝██║████╗  ██║██╔════╝██║
+██║██║  ██║███████╗    ███████╗█████╗  ██╔██╗ ██║   ██║   ██║██╔██╗ ██║█████╗  ██║
+██║██║  ██║╚════██║    ╚════██║██╔══╝  ██║╚██╗██║   ██║   ██║██║╚██╗██║██╔══╝  ██║
+██║██████╔╝███████║    ███████║███████╗██║ ╚████║   ██║   ██║██║ ╚████║███████╗███████╗
+╚═╝╚═════╝ ╚══════╝    ╚══════╝╚══════╝╚═╝  ╚═══╝   ╚═╝   ╚═╝╚═╝  ╚═══╝╚══════╝╚══════╝
+""".strip("\n")
+    print(colorize(banner, "1;36"))
+    print(
+        f"{colorize('IDS Sentinel Terminal', '1;33')} v{__version__}  |  defensive traffic analysis and local triage"
+    )
+    print()
+    print("Run commands like:")
+    print(
+        f"  {colorize('status', '1;32')}        show datasets, learned model, and latest export"
+    )
+    print(
+        f"  {colorize('learn quick', '1;32')}   refresh the self-learning IDS profile"
+    )
+    print(
+        f"  {colorize('scan kddtest.csv 5000', '1;32')} analyze traffic and export CSV/JSON reports"
+    )
+    print(f"  {colorize('ioc list', '1;32')}      manage indicators of compromise")
+    print(f"  {colorize('help', '1;32')}          show all commands")
+    print(f"  {colorize('exit', '1;32')}          quit")
+    print()
+
+
 def print_shell_help() -> None:
     section("Commands")
-    print(table(["Command", "Action"], [
-        ["status", "product dashboard: datasets, model, latest export"],
-        ["traffic", "summarize traffic volumes, services, protocols, flags"],
-        ["attacks", "attack distribution and learned attack indicators"],
-        ["malware [limit]", "show malware-like and privilege behavior indicators"],
-        ["learn [full|quick]", "build/update the self-learning profile"],
-        ["scan [path] [limit|all]", "analyze traffic and write downloadable CSV/JSON"],
-        ["export [path] [limit|all]", "same as scan; defaults to all rows"],
-        ["datasets", "show local and external IDS dataset catalog"],
-        ["import <csv> [name]", "copy a CSV into automation/product/imports and index it"],
-        ["download <url> [name]", "download a public dataset/file into imports"],
-        ["index [csv] [limit|all]", "inspect columns, labels, and top values"],
-        ["hunt <term> [path] [limit]", "search datasets, imports, and exported reports"],
-        ["ioc list|add|remove|hunt", "store and hunt indicators of compromise"],
-        ["ports [limit]", "show listening local ports and services"],
-        ["netstat [limit]", "show local network connections"],
-        ["port <number>", "explain a port and show local matches"],
-        ["probe <host> <ports>", "authorized TCP connect probe, e.g. probe 127.0.0.1 22,80,443"],
-        ["dns <host>", "resolve DNS and reverse names"],
-        ["ps [limit]", "list local processes"],
-        ["hash <file>", "calculate SHA256/SHA1/MD5"],
-        ["filescan <file>", "hash and check built-in suspicious file strings"],
-        ["pwd | cd | ls", "basic project filesystem navigation"],
-        ["cat | head | tail | grep", "text inspection commands"],
-        ["find | wc | du | stat", "file discovery and measurement commands"],
-        ["cache [limit]", "list cached command artifacts"],
-        ["reports [limit]", "list downloadable CSV/JSON reports"],
-        ["runs [limit]", "list previous ML training runs"],
-        ["clear", "clear the terminal"],
-        ["exit", "quit"],
-    ]))
+    print(
+        table(
+            ["Command", "Action"],
+            [
+                ["status", "product dashboard: datasets, model, latest export"],
+                ["traffic", "summarize traffic volumes, services, protocols, flags"],
+                ["attacks", "attack distribution and learned attack indicators"],
+                [
+                    "malware [limit]",
+                    "show malware-like and privilege behavior indicators",
+                ],
+                ["learn [full|quick]", "build/update the self-learning profile"],
+                [
+                    "scan [path] [limit|all]",
+                    "analyze traffic and write downloadable CSV/JSON",
+                ],
+                ["export [path] [limit|all]", "same as scan; defaults to all rows"],
+                ["datasets", "show local and external IDS dataset catalog"],
+                [
+                    "import <csv> [name]",
+                    "copy a CSV into automation/product/imports and index it",
+                ],
+                [
+                    "download <url> [name]",
+                    "download a public dataset/file into imports",
+                ],
+                ["index [csv] [limit|all]", "inspect columns, labels, and top values"],
+                [
+                    "hunt <term> [path] [limit]",
+                    "search datasets, imports, and exported reports",
+                ],
+                ["ioc list|add|remove|hunt", "store and hunt indicators of compromise"],
+                ["ports [limit]", "show listening local ports and services"],
+                ["netstat [limit]", "show local network connections"],
+                ["port <number>", "explain a port and show local matches"],
+                [
+                    "probe <host> <ports>",
+                    "authorized TCP connect probe, e.g. probe 127.0.0.1 22,80,443",
+                ],
+                ["dns <host>", "resolve DNS and reverse names"],
+                ["ps [limit]", "list local processes"],
+                ["hash <file>", "calculate SHA256/SHA1/MD5"],
+                ["filescan <file>", "hash and check built-in suspicious file strings"],
+                ["pwd | cd | ls", "basic project filesystem navigation"],
+                ["cat | head | tail | grep", "text inspection commands"],
+                ["find | wc | du | stat", "file discovery and measurement commands"],
+                ["cache [limit]", "list cached command artifacts"],
+                ["reports [limit]", "list downloadable CSV/JSON reports"],
+                ["runs [limit]", "list previous ML training runs"],
+                ["clear", "clear the terminal"],
+                ["exit", "quit"],
+            ],
+        )
+    )
 
 
 def parse_limit(value: str | None, default: int | None) -> int | None:
@@ -1996,9 +2639,16 @@ def parse_limit(value: str | None, default: int | None) -> int | None:
     return parsed
 
 
+def parse_count_limit(value: str | None, default: int) -> int:
+    parsed = parse_limit(value, default)
+    if parsed is None:
+        return default
+    return parsed
+
+
 def command_shell() -> None:
     ensure_product_dirs()
-    print("IDS Sentinel Terminal. Type 'help' for commands, 'exit' to quit.")
+    print_startup_banner()
     while True:
         try:
             raw = input("ids-sentinel> ").strip()
@@ -2035,7 +2685,15 @@ def run_shell_command(raw: str) -> bool:
     elif command == "clear":
         os.system("cls" if os.name == "nt" else "clear")
     elif command == "history":
-        print(table(["#", "Command"], [[index + 1, value] for index, value in enumerate(SHELL_STATE["history"][-50:])]))
+        print(
+            table(
+                ["#", "Command"],
+                [
+                    [index + 1, value]
+                    for index, value in enumerate(SHELL_STATE["history"][-50:])
+                ],
+            )
+        )
     elif command == "pwd":
         print(relative_path(Path(SHELL_STATE.get("cwd", ROOT_DIR))) or ".")
     elif command == "cd":
@@ -2063,9 +2721,17 @@ def run_shell_command(raw: str) -> bool:
         if not args:
             print("usage: grep <pattern> [path] [limit]")
         else:
-            shell_grep(args[0], args[1] if len(args) > 1 else ".", int(args[2]) if len(args) > 2 else 50)
+            shell_grep(
+                args[0],
+                args[1] if len(args) > 1 else ".",
+                int(args[2]) if len(args) > 2 else 50,
+            )
     elif command == "find":
-        shell_find(args[0] if args else "*", args[1] if len(args) > 1 else ".", int(args[2]) if len(args) > 2 else 200)
+        shell_find(
+            args[0] if args else "*",
+            args[1] if len(args) > 1 else ".",
+            int(args[2]) if len(args) > 2 else 200,
+        )
     elif command == "wc":
         if not args:
             print("usage: wc <file>")
@@ -2085,17 +2751,25 @@ def run_shell_command(raw: str) -> bool:
     elif command in {"attack", "attacks"}:
         show_attacks()
     elif command in {"malware", "malwares"}:
-        show_malware(limit=parse_limit(args[0], 5000) if args else 5000)
+        show_malware(limit=parse_count_limit(args[0] if args else None, 5000))
     elif command == "learn":
         mode = args[0].lower() if args else "full"
         limit = 20000 if mode == "quick" else None
         show_learn(learn_model(limit=limit, include_generated=True))
     elif command in {"scan", "analyze"}:
-        path = resolve_readable_path(args[0] if args else None, default=TEST_CSV, base=Path(SHELL_STATE.get("cwd", ROOT_DIR)))
+        path = resolve_readable_path(
+            args[0] if args else None,
+            default=TEST_CSV,
+            base=Path(SHELL_STATE.get("cwd", ROOT_DIR)),
+        )
         limit = parse_limit(args[1], 5000) if len(args) > 1 else 5000
         show_scan(analyze_csv(path, limit=limit, export=True))
     elif command == "export":
-        path = resolve_readable_path(args[0] if args else None, default=TEST_CSV, base=Path(SHELL_STATE.get("cwd", ROOT_DIR)))
+        path = resolve_readable_path(
+            args[0] if args else None,
+            default=TEST_CSV,
+            base=Path(SHELL_STATE.get("cwd", ROOT_DIR)),
+        )
         limit = parse_limit(args[1], None) if len(args) > 1 else None
         show_scan(analyze_csv(path, limit=limit, export=True))
     elif command in {"datasets", "catalog"}:
@@ -2104,7 +2778,14 @@ def run_shell_command(raw: str) -> bool:
         if not args:
             print("usage: import <csv-path> [name]")
         else:
-            show_import(import_csv(resolve_readable_path(args[0], base=Path(SHELL_STATE.get("cwd", ROOT_DIR))), args[1] if len(args) > 1 else None))
+            show_import(
+                import_csv(
+                    resolve_readable_path(
+                        args[0], base=Path(SHELL_STATE.get("cwd", ROOT_DIR))
+                    ),
+                    args[1] if len(args) > 1 else None,
+                )
+            )
     elif command == "download":
         if not args:
             print("usage: download <url> [name]")
@@ -2112,20 +2793,36 @@ def run_shell_command(raw: str) -> bool:
             downloaded = download_url(args[0], args[1] if len(args) > 1 else None)
             print(f"Downloaded: {relative_path(downloaded)}")
     elif command == "index":
-        path = resolve_readable_path(args[0] if args else None, default=TEST_CSV, base=Path(SHELL_STATE.get("cwd", ROOT_DIR)))
+        path = resolve_readable_path(
+            args[0] if args else None,
+            default=TEST_CSV,
+            base=Path(SHELL_STATE.get("cwd", ROOT_DIR)),
+        )
         limit = parse_limit(args[1], 50000) if len(args) > 1 else 50000
         show_index(path, limit=limit)
     elif command == "hunt":
         if not args:
             print("usage: hunt <term> [path] [limit]")
         else:
-            show_hunt(args[0], resolve_readable_path(args[1], base=Path(SHELL_STATE.get("cwd", ROOT_DIR))) if len(args) > 1 else None, limit=parse_limit(args[2], 50) if len(args) > 2 else 50)
+            show_hunt(
+                args[0],
+                resolve_readable_path(
+                    args[1], base=Path(SHELL_STATE.get("cwd", ROOT_DIR))
+                )
+                if len(args) > 1
+                else None,
+                limit=parse_count_limit(args[2] if len(args) > 2 else None, 50),
+            )
     elif command == "ioc":
         show_ioc(args)
     elif command in {"ports", "listeners"}:
-        show_netstat(only_listening=True, limit=parse_limit(args[0], 40) if args else 40)
+        show_netstat(
+            only_listening=True, limit=parse_count_limit(args[0] if args else None, 40)
+        )
     elif command in {"netstat", "connections"}:
-        show_netstat(only_listening=False, limit=parse_limit(args[0], 40) if args else 40)
+        show_netstat(
+            only_listening=False, limit=parse_count_limit(args[0] if args else None, 40)
+        )
     elif command == "port":
         if not args:
             print("usage: port <number>")
@@ -2142,21 +2839,30 @@ def run_shell_command(raw: str) -> bool:
         else:
             show_dns(args[0])
     elif command == "ps":
-        show_processes(limit=parse_limit(args[0], 40) if args else 40)
+        show_processes(limit=parse_count_limit(args[0] if args else None, 40))
     elif command == "hash":
         if not args:
             print("usage: hash <file>")
         else:
-            show_hash(resolve_readable_path(args[0], base=Path(SHELL_STATE.get("cwd", ROOT_DIR))), json_output=False)
+            show_hash(
+                resolve_readable_path(
+                    args[0], base=Path(SHELL_STATE.get("cwd", ROOT_DIR))
+                ),
+                json_output=False,
+            )
     elif command in {"filescan", "scanfile"}:
         if not args:
             print("usage: filescan <file>")
         else:
-            show_file_scan(resolve_readable_path(args[0], base=Path(SHELL_STATE.get("cwd", ROOT_DIR))))
+            show_file_scan(
+                resolve_readable_path(
+                    args[0], base=Path(SHELL_STATE.get("cwd", ROOT_DIR))
+                )
+            )
     elif command in {"reports", "downloads"}:
         show_reports(limit=parse_limit(args[0], 20) if args else 20)
     elif command == "cache":
-        show_cache(limit=parse_limit(args[0], 40) if args else 40)
+        show_cache(limit=parse_count_limit(args[0] if args else None, 40))
     elif command == "runs":
         show_runs(limit=parse_limit(args[0], 10) if args else 10)
     else:
@@ -2165,9 +2871,15 @@ def run_shell_command(raw: str) -> bool:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="IDS Sentinel Terminal for defensive CSV traffic analysis and local triage.")
-    parser.add_argument("--json", action="store_true", help="Print JSON for commands that support it.")
-    parser.add_argument("--version", action="version", version=f"IDS Sentinel Terminal {__version__}")
+    parser = argparse.ArgumentParser(
+        description="IDS Sentinel Terminal for defensive CSV traffic analysis and local triage."
+    )
+    parser.add_argument(
+        "--json", action="store_true", help="Print JSON for commands that support it."
+    )
+    parser.add_argument(
+        "--version", action="version", version=f"IDS Sentinel Terminal {__version__}"
+    )
     subparsers = parser.add_subparsers(dest="command")
 
     subparsers.add_parser("shell", help="Open IDS Sentinel Terminal interactive mode.")
@@ -2175,32 +2887,64 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers.add_parser("status", help="Show product status.")
     subparsers.add_parser("traffic", help="Show traffic data.")
     subparsers.add_parser("attacks", help="Show attacks and learned indicators.")
-    subparsers.add_parser("datasets", help="Show local and external IDS dataset catalog.")
+    subparsers.add_parser(
+        "datasets", help="Show local and external IDS dataset catalog."
+    )
 
-    malware_parser = subparsers.add_parser("malware", help="Show malware-like behavior indicators.")
+    malware_parser = subparsers.add_parser(
+        "malware", help="Show malware-like behavior indicators."
+    )
     malware_parser.add_argument("--limit", type=int, default=5000)
 
-    learn_parser = subparsers.add_parser("learn", help="Build/update the self-learning model.")
-    learn_parser.add_argument("--quick", action="store_true", help="Use a 20,000-row sample instead of all rows.")
-    learn_parser.add_argument("--full", action="store_true", help="Use all source rows. This is the default.")
-    learn_parser.add_argument("--include-test", action="store_true", help="Also learn from kddtest.csv labels.")
-    learn_parser.add_argument("--skip-generated", action="store_true", help="Do not learn from terminal-generated CSV exports.")
+    learn_parser = subparsers.add_parser(
+        "learn", help="Build/update the self-learning model."
+    )
+    learn_parser.add_argument(
+        "--quick",
+        action="store_true",
+        help="Use a 20,000-row sample instead of all rows.",
+    )
+    learn_parser.add_argument(
+        "--full", action="store_true", help="Use all source rows. This is the default."
+    )
+    learn_parser.add_argument(
+        "--include-test",
+        action="store_true",
+        help="Also learn from kddtest.csv labels.",
+    )
+    learn_parser.add_argument(
+        "--skip-generated",
+        action="store_true",
+        help="Do not learn from terminal-generated CSV exports.",
+    )
 
-    scan_parser = subparsers.add_parser("scan", help="Analyze a CSV and export CSV/JSON results.")
+    scan_parser = subparsers.add_parser(
+        "scan", help="Analyze a CSV and export CSV/JSON results."
+    )
     scan_parser.add_argument("path", nargs="?", default=None)
     scan_parser.add_argument("--limit", type=int, default=5000)
     scan_parser.add_argument("--all", action="store_true", help="Analyze all rows.")
-    scan_parser.add_argument("--no-export", action="store_true", help="Only print summary; do not write downloadable files.")
+    scan_parser.add_argument(
+        "--no-export",
+        action="store_true",
+        help="Only print summary; do not write downloadable files.",
+    )
 
-    export_parser = subparsers.add_parser("export", help="Analyze and export all rows by default.")
+    export_parser = subparsers.add_parser(
+        "export", help="Analyze and export all rows by default."
+    )
     export_parser.add_argument("path", nargs="?", default=None)
     export_parser.add_argument("--limit", type=int)
 
-    import_parser = subparsers.add_parser("import", help="Copy a CSV into product imports and index it.")
+    import_parser = subparsers.add_parser(
+        "import", help="Copy a CSV into product imports and index it."
+    )
     import_parser.add_argument("path")
     import_parser.add_argument("--name")
 
-    download_parser = subparsers.add_parser("download", help="Download a public URL into product imports.")
+    download_parser = subparsers.add_parser(
+        "download", help="Download a public URL into product imports."
+    )
     download_parser.add_argument("url")
     download_parser.add_argument("--name")
 
@@ -2209,22 +2953,30 @@ def build_parser() -> argparse.ArgumentParser:
     index_parser.add_argument("--limit", type=int, default=50000)
     index_parser.add_argument("--all", action="store_true")
 
-    hunt_parser = subparsers.add_parser("hunt", help="Search datasets, imports, and reports for text.")
+    hunt_parser = subparsers.add_parser(
+        "hunt", help="Search datasets, imports, and reports for text."
+    )
     hunt_parser.add_argument("pattern")
     hunt_parser.add_argument("--path")
     hunt_parser.add_argument("--limit", type=int, default=50)
 
-    ioc_parser = subparsers.add_parser("ioc", help="Manage and hunt indicators of compromise.")
+    ioc_parser = subparsers.add_parser(
+        "ioc", help="Manage and hunt indicators of compromise."
+    )
     ioc_parser.add_argument("ioc_args", nargs="*")
 
-    netstat_parser = subparsers.add_parser("netstat", help="Show local network connections.")
+    netstat_parser = subparsers.add_parser(
+        "netstat", help="Show local network connections."
+    )
     netstat_parser.add_argument("--limit", type=int, default=40)
     netstat_parser.add_argument("--listening", action="store_true")
 
     ports_parser = subparsers.add_parser("ports", help="Show local listening ports.")
     ports_parser.add_argument("--limit", type=int, default=40)
 
-    port_parser = subparsers.add_parser("port", help="Explain a port and show local matches.")
+    port_parser = subparsers.add_parser(
+        "port", help="Explain a port and show local matches."
+    )
     port_parser.add_argument("number", type=int)
 
     probe_parser = subparsers.add_parser("probe", help="Authorized TCP connect probe.")
@@ -2243,7 +2995,9 @@ def build_parser() -> argparse.ArgumentParser:
     filescan_parser = subparsers.add_parser("filescan", help="Hash and triage a file.")
     filescan_parser.add_argument("path")
 
-    reports_parser = subparsers.add_parser("reports", help="List generated downloadable reports.")
+    reports_parser = subparsers.add_parser(
+        "reports", help="List generated downloadable reports."
+    )
     reports_parser.add_argument("--limit", type=int, default=20)
 
     runs_parser = subparsers.add_parser("runs", help="List existing ML training runs.")
@@ -2295,22 +3049,39 @@ def main(argv: list[str] | None = None) -> int:
             show_learn(model, args.json)
         elif args.command == "scan":
             source = resolve_readable_path(args.path, default=TEST_CSV)
-            summary = analyze_csv(source, limit=None if args.all else args.limit, export=not args.no_export)
+            summary = analyze_csv(
+                source,
+                limit=None if args.all else args.limit,
+                export=not args.no_export,
+            )
             show_scan(summary, args.json)
         elif args.command == "export":
             source = resolve_readable_path(args.path, default=TEST_CSV)
             summary = analyze_csv(source, limit=args.limit, export=True)
             show_scan(summary, args.json)
         elif args.command == "import":
-            show_import(import_csv(resolve_readable_path(args.path), args.name), args.json)
+            show_import(
+                import_csv(resolve_readable_path(args.path), args.name), args.json
+            )
         elif args.command == "download":
             downloaded = download_url(args.url, args.name)
             payload = {"downloaded": relative_path(downloaded)}
-            print_json(payload) if args.json else print(f"Downloaded: {payload['downloaded']}")
+            print_json(payload) if args.json else print(
+                f"Downloaded: {payload['downloaded']}"
+            )
         elif args.command == "index":
-            show_index(resolve_readable_path(args.path, default=TEST_CSV), args.json, limit=None if args.all else args.limit)
+            show_index(
+                resolve_readable_path(args.path, default=TEST_CSV),
+                args.json,
+                limit=None if args.all else args.limit,
+            )
         elif args.command == "hunt":
-            show_hunt(args.pattern, resolve_readable_path(args.path) if args.path else None, args.json, args.limit)
+            show_hunt(
+                args.pattern,
+                resolve_readable_path(args.path) if args.path else None,
+                args.json,
+                args.limit,
+            )
         elif args.command == "ioc":
             show_ioc(args.ioc_args, args.json)
         elif args.command == "netstat":
