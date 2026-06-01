@@ -4,6 +4,10 @@ IDS Sentinel Terminal is an installable defensive CLI and GUI tool built around 
 
 The older FastAPI/Docker automation app and ML training code are still present in this repository. For end users, the recommended interface is the packaged CLI/GUI tool.
 
+## CLI Preview
+
+![IDS Sentinel Terminal CLI thumbnail](docs/images/ids-sentinel-cli-thumbnail.png)
+
 ## What This Product Does
 
 - Reads the bundled `kddtrain.csv` and `kddtest.csv` traffic datasets.
