@@ -1,0 +1,38 @@
+{
+  "created_at": "2026-06-02T04:49:52+00:00",
+  "kind": "bandwidth",
+  "payload": {
+    "duration_seconds": 1,
+    "interfaces": [
+      {
+        "interface": "lo",
+        "rx_bytes": 0,
+        "tx_bytes": 0,
+        "rx_kbps": 0.0,
+        "tx_kbps": 0.0
+      },
+      {
+        "interface": "enp55s0",
+        "rx_bytes": 0,
+        "tx_bytes": 0,
+        "rx_kbps": 0.0,
+        "tx_kbps": 0.0
+      },
+      {
+        "interface": "virbr0",
+        "rx_bytes": 0,
+        "tx_bytes": 0,
+        "rx_kbps": 0.0,
+        "tx_kbps": 0.0
+      },
+      {
+        "interface": "enx0ee40b5c9df8",
+        "rx_bytes": 39042,
+        "tx_bytes": 1320,
+        "rx_kbps": 312.34,
+        "tx_kbps": 10.56
+      }
+    ],
+    "note": "Local interface counters only. Per-device/router-wide usage requires router API/SNMP/UPnP support."
+  }
+}

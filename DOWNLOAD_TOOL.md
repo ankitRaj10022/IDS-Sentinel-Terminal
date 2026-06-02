@@ -8,7 +8,7 @@ The release assets are tool-only downloads:
 ids-sentinel-terminal-windows.zip
 ids-sentinel-terminal-linux.tar.gz
 ids-sentinel-terminal-macos.tar.gz
-ids_sentinel_terminal-0.2.2-py3-none-any.whl
+ids_sentinel_terminal-0.3.0-py3-none-any.whl
 ```
 
 ## One-Line Install From GitHub Releases
@@ -41,7 +41,7 @@ After publishing a GitHub Release, these URLs always point to the latest tool ar
 https://github.com/ankitRaj10022/IDS-Sentinel-Terminal/releases/latest/download/ids-sentinel-terminal-windows.zip
 https://github.com/ankitRaj10022/IDS-Sentinel-Terminal/releases/latest/download/ids-sentinel-terminal-linux.tar.gz
 https://github.com/ankitRaj10022/IDS-Sentinel-Terminal/releases/latest/download/ids-sentinel-terminal-macos.tar.gz
-https://github.com/ankitRaj10022/IDS-Sentinel-Terminal/releases/latest/download/ids_sentinel_terminal-0.2.2-py3-none-any.whl
+https://github.com/ankitRaj10022/IDS-Sentinel-Terminal/releases/latest/download/ids_sentinel_terminal-0.3.0-py3-none-any.whl
 ```
 
 ## Manual Windows Install

@@ -1,0 +1,42 @@
+IDS Sentinel Website Scan Report
+================================
+Target: https://example.com
+Hostname: example.com
+Created: 2026-06-02T04:56:32+00:00
+
+Safety note: Use website scanning only on domains you own or are authorized to assess.
+
+DNS
+---
+Canonical: example.com
+Aliases: 
+Addresses: 172.66.147.243, 104.20.23.154
+
+Ports
+-----
+   80 http           open    64.8 ms
+  443 https          open    43.53 ms
+
+HTTP/HTTPS
+----------
+URL: http://example.com/
+  Status: 200 OK
+  Server: cloudflare
+  Content-Type: text/html
+
+URL: https://example.com/
+  Status: 200 OK
+  Server: cloudflare
+  Content-Type: text/html
+
+TLS Certificate
+---------------
+Not Before: May 31 21:39:12 2026 GMT
+Not After:  Aug 29 21:41:26 2026 GMT
+Cipher:     ('TLS_AES_256_GCM_SHA384', 'TLSv1.3', 256)
+Issuer:     ((('countryName', 'US'),), (('organizationName', 'SSL Corporation'),), (('commonName', 'Cloudflare TLS Issuing ECC CA 3'),))
+
+Findings
+--------
+[low] missing_hsts: HTTPS response did not include Strict-Transport-Security
+[low] missing_csp: HTTPS response did not include Content-Security-Policy

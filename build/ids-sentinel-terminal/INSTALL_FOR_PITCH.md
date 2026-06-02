@@ -61,7 +61,7 @@ Use this when you are presenting from this project folder or carrying the `dist`
 Windows PowerShell:
 
 ```powershell
-py -3 -m pip install --user --force-reinstall .\dist\ids_sentinel_terminal-0.2.2-py3-none-any.whl
+py -3 -m pip install --user --force-reinstall .\dist\ids_sentinel_terminal-0.3.0-py3-none-any.whl
 ids-sentinel --version
 ids-sentinel status
 ```
@@ -69,14 +69,14 @@ ids-sentinel status
 Linux/macOS from the repo folder with `pipx`:
 
 ```bash
-pipx install --force ./dist/ids_sentinel_terminal-0.2.2-py3-none-any.whl
+pipx install --force ./dist/ids_sentinel_terminal-0.3.0-py3-none-any.whl
 ids-sentinel status
 ```
 
 Linux/macOS from the repo folder with `pip`:
 
 ```bash
-python3 -m pip install --user --force-reinstall ./dist/ids_sentinel_terminal-0.2.2-py3-none-any.whl
+python3 -m pip install --user --force-reinstall ./dist/ids_sentinel_terminal-0.3.0-py3-none-any.whl
 export PATH="$HOME/.local/bin:$PATH"
 ids-sentinel --version
 ids-sentinel status
@@ -85,14 +85,14 @@ ids-sentinel status
 WSL from the Windows repo path with `pipx`:
 
 ```bash
-pipx install --force /mnt/c/Users/danny/Desktop/Intrusion-Detection-Systems-master/IDS-MachineLearning/dist/ids_sentinel_terminal-0.2.2-py3-none-any.whl
+pipx install --force /mnt/c/Users/danny/Desktop/Intrusion-Detection-Systems-master/IDS-MachineLearning/dist/ids_sentinel_terminal-0.3.0-py3-none-any.whl
 ids-sentinel status
 ```
 
 WSL from the Windows repo path with `pip`:
 
 ```bash
-python3 -m pip install --user --force-reinstall /mnt/c/Users/danny/Desktop/Intrusion-Detection-Systems-master/IDS-MachineLearning/dist/ids_sentinel_terminal-0.2.2-py3-none-any.whl
+python3 -m pip install --user --force-reinstall /mnt/c/Users/danny/Desktop/Intrusion-Detection-Systems-master/IDS-MachineLearning/dist/ids_sentinel_terminal-0.3.0-py3-none-any.whl
 export PATH="$HOME/.local/bin:$PATH"
 ids-sentinel --version
 ids-sentinel status

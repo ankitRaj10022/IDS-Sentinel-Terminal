@@ -13,9 +13,11 @@ import re
 import shlex
 import shutil
 import socket
+import ssl
 import subprocess
 import sys
 import time
+import urllib.parse
 import urllib.request
 from collections import Counter
 from dataclasses import dataclass
@@ -75,6 +77,7 @@ TRAIN_CSV = ROOT_DIR / "kddtrain.csv"
 TEST_CSV = ROOT_DIR / "kddtest.csv"
 PRODUCT_DIR = ROOT_DIR / "automation" / "product"
 EXPORTS_DIR = PRODUCT_DIR / "exports"
+WEB_REPORTS_DIR = PRODUCT_DIR / "website_reports"
 IMPORTS_DIR = PRODUCT_DIR / "imports"
 CACHE_DIR = PRODUCT_DIR / "cache"
 INDEX_DIR = CACHE_DIR / "indexes"
@@ -82,6 +85,7 @@ COMMAND_CACHE_DIR = CACHE_DIR / "commands"
 LEGACY_INDEX_DIR = PRODUCT_DIR / "indexes"
 MODEL_PATH = PRODUCT_DIR / "self_learning_model.json"
 IOC_PATH = PRODUCT_DIR / "iocs.json"
+LIVE_MODEL_PATH = PRODUCT_DIR / "live_connection_profile.json"
 
 SHELL_STATE = {"cwd": ROOT_DIR, "history": []}
 
@@ -251,6 +255,7 @@ def ensure_product_dirs() -> None:
     for path in (
         PRODUCT_DIR,
         EXPORTS_DIR,
+        WEB_REPORTS_DIR,
         IMPORTS_DIR,
         CACHE_DIR,
         INDEX_DIR,
@@ -1546,6 +1551,201 @@ def show_netstat(
     )
 
 
+def summarize_live_connections(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    remote_hosts = Counter(
+        str(row.get("remote_host") or "")
+        for row in rows
+        if str(row.get("remote_host") or "") not in {"", "*", "0.0.0.0", "::", "*:*"}
+    )
+    local_ports = Counter(
+        str(row.get("local_port") or "") for row in rows if row.get("local_port")
+    )
+    remote_ports = Counter(
+        str(row.get("remote_port") or "") for row in rows if row.get("remote_port")
+    )
+    states = Counter(str(row.get("state") or "") for row in rows)
+    risky_ports = sorted(
+        {
+            int(port)
+            for port in [
+                *(row.get("local_port") for row in rows),
+                *(row.get("remote_port") for row in rows),
+            ]
+            if isinstance(port, int) and port in COMMON_PORT_RISKS
+        }
+    )
+    return {
+        "created_at": utc_now(),
+        "connection_count": len(rows),
+        "listening_count": sum(
+            1 for row in rows if str(row.get("state")) in {"LISTEN", "LISTENING", "UDP"}
+        ),
+        "remote_hosts": dict(remote_hosts.most_common(100)),
+        "local_ports": dict(local_ports.most_common(100)),
+        "remote_ports": dict(remote_ports.most_common(100)),
+        "states": dict(states.most_common()),
+        "risky_ports": risky_ports,
+    }
+
+
+def learn_live_profile(duration: int = 30, interval: float = 2.0) -> dict[str, Any]:
+    ensure_product_dirs()
+    snapshots = []
+    end_time = time.time() + max(duration, 1)
+    while time.time() < end_time:
+        snapshots.append(summarize_live_connections(parse_netstat()))
+        time.sleep(max(interval, 0.2))
+    combined_hosts: Counter[str] = Counter()
+    combined_local_ports: Counter[str] = Counter()
+    combined_remote_ports: Counter[str] = Counter()
+    max_connections = 0
+    max_listening = 0
+    for snapshot in snapshots:
+        combined_hosts.update(snapshot["remote_hosts"])
+        combined_local_ports.update(snapshot["local_ports"])
+        combined_remote_ports.update(snapshot["remote_ports"])
+        max_connections = max(max_connections, int(snapshot["connection_count"]))
+        max_listening = max(max_listening, int(snapshot["listening_count"]))
+    profile = {
+        "version": 1,
+        "created_at": utc_now(),
+        "duration_seconds": duration,
+        "interval_seconds": interval,
+        "snapshots": len(snapshots),
+        "max_connections": max_connections,
+        "max_listening": max_listening,
+        "known_remote_hosts": sorted(combined_hosts),
+        "known_local_ports": sorted(
+            combined_local_ports,
+            key=lambda value: int(value) if value.isdigit() else value,
+        ),
+        "known_remote_ports": sorted(
+            combined_remote_ports,
+            key=lambda value: int(value) if value.isdigit() else value,
+        ),
+        "top_remote_hosts": dict(combined_hosts.most_common(25)),
+        "top_local_ports": dict(combined_local_ports.most_common(25)),
+        "top_remote_ports": dict(combined_remote_ports.most_common(25)),
+    }
+    write_json(LIVE_MODEL_PATH, profile)
+    cache_artifact("live_learn", profile)
+    return profile
+
+
+def analyze_live_connections(
+    rows: list[dict[str, Any]], profile: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    summary = summarize_live_connections(rows)
+    known_hosts = set((profile or {}).get("known_remote_hosts", []))
+    known_local_ports = set((profile or {}).get("known_local_ports", []))
+    known_remote_ports = set((profile or {}).get("known_remote_ports", []))
+    new_hosts = sorted(
+        host
+        for host in summary["remote_hosts"]
+        if known_hosts and host not in known_hosts
+    )
+    new_local_ports = sorted(
+        port
+        for port in summary["local_ports"]
+        if known_local_ports and port not in known_local_ports
+    )
+    new_remote_ports = sorted(
+        port
+        for port in summary["remote_ports"]
+        if known_remote_ports and port not in known_remote_ports
+    )
+    findings = []
+    for port in summary["risky_ports"]:
+        findings.append(
+            {
+                "severity": "medium",
+                "type": "sensitive_port",
+                "detail": f"port {port}: {COMMON_PORT_RISKS.get(port, '')}",
+            }
+        )
+    for host in new_hosts[:20]:
+        findings.append({"severity": "low", "type": "new_remote_host", "detail": host})
+    for port in new_local_ports[:20]:
+        findings.append(
+            {"severity": "medium", "type": "new_local_port", "detail": port}
+        )
+    for port in new_remote_ports[:20]:
+        findings.append({"severity": "low", "type": "new_remote_port", "detail": port})
+    max_connections = int((profile or {}).get("max_connections", 0) or 0)
+    if max_connections and summary["connection_count"] > max_connections * 2:
+        findings.append(
+            {
+                "severity": "high",
+                "type": "connection_spike",
+                "detail": f"{summary['connection_count']} connections exceeds learned max {max_connections}",
+            }
+        )
+    payload = {
+        "summary": summary,
+        "profile_path": relative_path(LIVE_MODEL_PATH)
+        if LIVE_MODEL_PATH.exists()
+        else None,
+        "findings": findings,
+    }
+    cache_artifact("live", payload)
+    return payload
+
+
+def show_live(
+    json_output: bool = False,
+    duration: int = 10,
+    interval: float = 2.0,
+    learn: bool = False,
+) -> None:
+    if learn:
+        profile = learn_live_profile(duration=duration, interval=interval)
+        if json_output:
+            print_json(profile)
+            return
+        section("Live Baseline Learned")
+        print(f"Profile: {relative_path(LIVE_MODEL_PATH)}")
+        print(
+            f"Snapshots: {profile['snapshots']} | max connections: {profile['max_connections']} | max listening: {profile['max_listening']}"
+        )
+        print(
+            table(
+                ["Known Local Ports", "Known Remote Ports"],
+                [
+                    [
+                        ", ".join(profile["known_local_ports"][:20]),
+                        ", ".join(profile["known_remote_ports"][:20]),
+                    ]
+                ],
+            )
+        )
+        return
+
+    profile = read_json(LIVE_MODEL_PATH)
+    end_time = time.time() + max(duration, 1)
+    latest: dict[str, Any] | None = None
+    while time.time() < end_time:
+        latest = analyze_live_connections(parse_netstat(), profile)
+        if not json_output:
+            section("Live Connection Monitor")
+            summary = latest["summary"]
+            print(
+                f"Connections: {summary['connection_count']} | listening: {summary['listening_count']} | findings: {len(latest['findings'])}"
+            )
+            if latest["findings"]:
+                print(
+                    table(
+                        ["Severity", "Type", "Detail"],
+                        [
+                            [item["severity"], item["type"], item["detail"]]
+                            for item in latest["findings"][:12]
+                        ],
+                    )
+                )
+        time.sleep(max(interval, 0.2))
+    if json_output:
+        print_json(latest or analyze_live_connections(parse_netstat(), profile))
+
+
 def show_port(port: int, json_output: bool = False) -> None:
     services = load_services()
     payload = {
@@ -1635,6 +1835,465 @@ def show_probe(host: str, ports_text: str, json_output: bool = False) -> None:
             ],
         )
     )
+
+
+def ping_host(host: str, timeout_ms: int = 700) -> bool:
+    if os.name == "nt":
+        command = ["ping", "-n", "1", "-w", str(timeout_ms), host]
+    else:
+        timeout_seconds = max(1, math.ceil(timeout_ms / 1000))
+        command = ["ping", "-c", "1", "-W", str(timeout_seconds), host]
+    try:
+        completed = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=max(2, timeout_ms / 1000 + 1),
+            check=False,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return False
+    return completed.returncode == 0
+
+
+def default_local_cidr() -> str:
+    candidates: list[str] = []
+    try:
+        candidates.extend(socket.gethostbyname_ex(socket.gethostname())[2])
+    except OSError:
+        pass
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+            sock.connect(("8.8.8.8", 80))
+            candidates.append(sock.getsockname()[0])
+    except OSError:
+        pass
+    for address in candidates:
+        try:
+            ip = ipaddress.ip_address(address)
+        except ValueError:
+            continue
+        if ip.version == 4 and not ip.is_loopback:
+            return str(ipaddress.ip_network(f"{address}/24", strict=False))
+    return "127.0.0.0/24"
+
+
+def arp_table() -> dict[str, str]:
+    try:
+        completed = subprocess.run(
+            ["arp", "-a"], capture_output=True, text=True, timeout=10, check=False
+        )
+    except FileNotFoundError:
+        return {}
+    entries: dict[str, str] = {}
+    for line in completed.stdout.splitlines():
+        ip_match = re.search(r"(\d{1,3}(?:\.\d{1,3}){3})", line)
+        mac_match = re.search(r"([0-9a-fA-F]{2}(?::|-)){5}[0-9a-fA-F]{2}", line)
+        if ip_match:
+            entries[ip_match.group(1)] = mac_match.group(0) if mac_match else ""
+    return entries
+
+
+def discover_devices(
+    cidr: str | None = None, limit: int = 254, ports_text: str | None = None
+) -> list[dict[str, Any]]:
+    network = ipaddress.ip_network(cidr or default_local_cidr(), strict=False)
+    if network.num_addresses > 4096:
+        raise ValueError(
+            "discovery is limited to networks up to 4096 addresses; scan only networks you own/administer"
+        )
+    hosts = [str(host) for host in network.hosts()][:limit]
+    active = []
+    for host in hosts:
+        if ping_host(host):
+            active.append(host)
+    arp = arp_table()
+    ports = parse_ports(ports_text) if ports_text else []
+    rows: list[dict[str, Any]] = []
+    for host in active:
+        open_ports: list[int] = []
+        if ports:
+            open_ports = [
+                item["port"]
+                for item in probe_ports(host, ports, timeout_seconds=0.15)
+                if item["status"] == "open"
+            ]
+        rows.append(
+            {
+                "ip": host,
+                "mac": arp.get(host, ""),
+                "status": "active",
+                "open_ports": open_ports,
+            }
+        )
+    return rows
+
+
+def show_discover(
+    cidr: str | None = None,
+    json_output: bool = False,
+    limit: int = 254,
+    ports_text: str | None = None,
+) -> None:
+    payload = {
+        "network": cidr or default_local_cidr(),
+        "devices": discover_devices(cidr, limit=limit, ports_text=ports_text),
+    }
+    cache_artifact("discover", payload)
+    if json_output:
+        print_json(payload)
+        return
+    section("LAN Device Discovery")
+    print("Use only on networks you own or are authorized to assess.")
+    print(f"Network: {payload['network']} | active devices: {len(payload['devices'])}")
+    print(
+        table(
+            ["IP", "MAC", "Status", "Open Ports"],
+            [
+                [
+                    item["ip"],
+                    item["mac"],
+                    item["status"],
+                    ", ".join(str(port) for port in item["open_ports"]),
+                ]
+                for item in payload["devices"]
+            ],
+        )
+    )
+
+
+def show_scanhost(host: str, ports_text: str, json_output: bool = False) -> None:
+    payload = {
+        "host": host,
+        "reachable": ping_host(host),
+        "ports": probe_ports(host, parse_ports(ports_text), timeout_seconds=0.25),
+    }
+    cache_artifact("scanhost", payload)
+    if json_output:
+        print_json(payload)
+        return
+    section("Host Port Scan")
+    print("Use only on systems you own or are authorized to test.")
+    print(f"Host: {host} | reachable: {payload['reachable']}")
+    print(
+        table(
+            ["Port", "Service", "Status", "ms"],
+            [
+                [item["port"], item["service"], item["status"], item["elapsed_ms"]]
+                for item in payload["ports"]
+            ],
+        )
+    )
+
+
+def read_interface_counters() -> dict[str, dict[str, int]]:
+    if os.name != "nt" and Path("/proc/net/dev").exists():
+        counters: dict[str, dict[str, int]] = {}
+        for line in (
+            Path("/proc/net/dev")
+            .read_text(encoding="utf-8", errors="ignore")
+            .splitlines()[2:]
+        ):
+            if ":" not in line:
+                continue
+            name, rest = line.split(":", 1)
+            parts = rest.split()
+            if len(parts) >= 16:
+                counters[name.strip()] = {
+                    "rx_bytes": int(parts[0]),
+                    "tx_bytes": int(parts[8]),
+                }
+        return counters
+    return {}
+
+
+def show_bandwidth(
+    json_output: bool = False, duration: int = 5, interval: float = 1.0
+) -> None:
+    start = read_interface_counters()
+    time.sleep(max(duration, 1))
+    end = read_interface_counters()
+    rows = []
+    for name, after in end.items():
+        before = start.get(
+            name, {"rx_bytes": after["rx_bytes"], "tx_bytes": after["tx_bytes"]}
+        )
+        rx_delta = after["rx_bytes"] - before["rx_bytes"]
+        tx_delta = after["tx_bytes"] - before["tx_bytes"]
+        rows.append(
+            {
+                "interface": name,
+                "rx_bytes": rx_delta,
+                "tx_bytes": tx_delta,
+                "rx_kbps": round((rx_delta * 8) / max(duration, 1) / 1000, 2),
+                "tx_kbps": round((tx_delta * 8) / max(duration, 1) / 1000, 2),
+            }
+        )
+    payload = {
+        "duration_seconds": duration,
+        "interfaces": rows,
+        "note": "Local interface counters only. Per-device/router-wide usage requires router API/SNMP/UPnP support.",
+    }
+    cache_artifact("bandwidth", payload)
+    if json_output:
+        print_json(payload)
+        return
+    section("Bandwidth Usage")
+    print(payload["note"])
+    if not rows:
+        print(
+            "No interface counters available on this platform without an optional router/API integration."
+        )
+        return
+    print(
+        table(
+            ["Interface", "RX KB/s", "TX KB/s", "RX Bytes", "TX Bytes"],
+            [
+                [
+                    item["interface"],
+                    item["rx_kbps"],
+                    item["tx_kbps"],
+                    item["rx_bytes"],
+                    item["tx_bytes"],
+                ]
+                for item in rows
+            ],
+        )
+    )
+
+
+def normalize_website_target(target: str) -> tuple[str, str]:
+    text = target.strip()
+    if not re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", text):
+        text = "https://" + text
+    parsed = urllib.parse.urlparse(text)
+    if not parsed.hostname:
+        raise ValueError("website URL or hostname is required")
+    return text, parsed.hostname
+
+
+def safe_report_name(hostname: str) -> str:
+    safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", hostname.lower()).strip("._-")
+    return safe or "website"
+
+
+def fetch_url_metadata(url: str, timeout: float = 8.0) -> dict[str, Any]:
+    request = urllib.request.Request(
+        url, headers={"User-Agent": f"IDS-Sentinel-Terminal/{__version__}"}
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            body_sample = response.read(4096)
+            return {
+                "url": response.geturl(),
+                "status": getattr(response, "status", None),
+                "reason": getattr(response, "reason", ""),
+                "headers": dict(response.headers.items()),
+                "sample_bytes": len(body_sample),
+            }
+    except Exception as exc:
+        return {"url": url, "error": str(exc)}
+
+
+def tls_certificate_summary(
+    hostname: str, port: int = 443, timeout: float = 8.0
+) -> dict[str, Any]:
+    try:
+        context = ssl.create_default_context()
+        with socket.create_connection((hostname, port), timeout=timeout) as raw_sock:
+            with context.wrap_socket(raw_sock, server_hostname=hostname) as tls_sock:
+                cert = tls_sock.getpeercert() or {}
+                return {
+                    "subject": cert.get("subject", []),
+                    "issuer": cert.get("issuer", []),
+                    "not_before": cert.get("notBefore", ""),
+                    "not_after": cert.get("notAfter", ""),
+                    "version": cert.get("version", ""),
+                    "serial_number": cert.get("serialNumber", ""),
+                    "cipher": tls_sock.cipher(),
+                }
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
+def website_report_text(payload: dict[str, Any]) -> str:
+    lines = [
+        "IDS Sentinel Website Scan Report",
+        "=" * 32,
+        f"Target: {payload['target']}",
+        f"Hostname: {payload['hostname']}",
+        f"Created: {payload['created_at']}",
+        "",
+        "Safety note: Use website scanning only on domains you own or are authorized to assess.",
+        "",
+        "DNS",
+        "---",
+    ]
+    if payload["dns"].get("error"):
+        lines.append(f"Error: {payload['dns']['error']}")
+    else:
+        lines.append(f"Canonical: {payload['dns'].get('canonical', '')}")
+        lines.append(f"Aliases: {', '.join(payload['dns'].get('aliases', []))}")
+        lines.append(f"Addresses: {', '.join(payload['dns'].get('addresses', []))}")
+    lines.extend(["", "Ports", "-----"])
+    for row in payload["ports"]:
+        lines.append(
+            f"{row['port']:>5} {row.get('service', ''):<14} {row['status']:<7} {row['elapsed_ms']} ms"
+        )
+    lines.extend(["", "HTTP/HTTPS", "----------"])
+    for item in payload["http"]:
+        lines.append(f"URL: {item.get('url')}")
+        if item.get("error"):
+            lines.append(f"  Error: {item['error']}")
+        else:
+            lines.append(f"  Status: {item.get('status')} {item.get('reason', '')}")
+            interesting = [
+                "Server",
+                "Content-Type",
+                "Content-Length",
+                "Location",
+                "Strict-Transport-Security",
+                "X-Frame-Options",
+                "Content-Security-Policy",
+            ]
+            headers = item.get("headers", {})
+            for key in interesting:
+                if key in headers:
+                    lines.append(f"  {key}: {headers[key]}")
+        lines.append("")
+    lines.extend(["TLS Certificate", "---------------"])
+    tls = payload["tls"]
+    if tls.get("error"):
+        lines.append(f"Error: {tls['error']}")
+    else:
+        lines.append(f"Not Before: {tls.get('not_before', '')}")
+        lines.append(f"Not After:  {tls.get('not_after', '')}")
+        lines.append(f"Cipher:     {tls.get('cipher', '')}")
+        lines.append(f"Issuer:     {tls.get('issuer', '')}")
+    lines.extend(["", "Findings", "--------"])
+    if payload["findings"]:
+        for finding in payload["findings"]:
+            lines.append(
+                f"[{finding['severity']}] {finding['type']}: {finding['detail']}"
+            )
+    else:
+        lines.append("No built-in findings from this lightweight scan.")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def webscan(target: str, ports_text: str = "80,443,8080,8443") -> dict[str, Any]:
+    ensure_product_dirs()
+    url, hostname = normalize_website_target(target)
+    dns_payload: dict[str, Any]
+    try:
+        canonical, aliases, addresses = socket.gethostbyname_ex(hostname)
+        dns_payload = {
+            "canonical": canonical,
+            "aliases": aliases,
+            "addresses": addresses,
+        }
+    except OSError as exc:
+        dns_payload = {"error": str(exc), "addresses": []}
+    ports = probe_ports(hostname, parse_ports(ports_text), timeout_seconds=0.5)
+    http_targets = []
+    parsed = urllib.parse.urlparse(url)
+    base_path = parsed.path or "/"
+    http_targets.append(f"http://{hostname}{base_path}")
+    http_targets.append(f"https://{hostname}{base_path}")
+    http_results = [fetch_url_metadata(item) for item in http_targets]
+    tls = tls_certificate_summary(hostname)
+    findings = []
+    for row in ports:
+        if row["status"] == "open" and row["port"] not in {80, 443}:
+            findings.append(
+                {
+                    "severity": "medium",
+                    "type": "extra_open_port",
+                    "detail": f"{row['port']} {row.get('service', '')}",
+                }
+            )
+    for item in http_results:
+        headers = item.get("headers", {})
+        if (
+            item.get("url", "").startswith("https://")
+            and not headers.get("Strict-Transport-Security")
+            and not item.get("error")
+        ):
+            findings.append(
+                {
+                    "severity": "low",
+                    "type": "missing_hsts",
+                    "detail": "HTTPS response did not include Strict-Transport-Security",
+                }
+            )
+        if (
+            item.get("url", "").startswith("https://")
+            and not headers.get("Content-Security-Policy")
+            and not item.get("error")
+        ):
+            findings.append(
+                {
+                    "severity": "low",
+                    "type": "missing_csp",
+                    "detail": "HTTPS response did not include Content-Security-Policy",
+                }
+            )
+    payload = {
+        "target": target,
+        "hostname": hostname,
+        "created_at": utc_now(),
+        "dns": dns_payload,
+        "ports": ports,
+        "http": http_results,
+        "tls": tls,
+        "findings": findings,
+    }
+    report_path = (
+        WEB_REPORTS_DIR / f"{safe_report_name(hostname)}_{compact_timestamp()}.txt"
+    )
+    report_path.write_text(website_report_text(payload), encoding="utf-8", newline="\n")
+    payload["report_path"] = relative_path(report_path)
+    cache_artifact("webscan", payload)
+    return payload
+
+
+def show_webscan(
+    target: str, ports_text: str = "80,443,8080,8443", json_output: bool = False
+) -> None:
+    payload = webscan(target, ports_text)
+    if json_output:
+        print_json(payload)
+        return
+    section("Website Scan")
+    print("Use only on websites you own or are authorized to assess.")
+    print(f"Target: {payload['target']} | hostname: {payload['hostname']}")
+    print(f"Report: {payload['report_path']}")
+    print(
+        table(
+            ["Port", "Service", "Status", "ms"],
+            [
+                [
+                    item["port"],
+                    item.get("service", ""),
+                    item["status"],
+                    item["elapsed_ms"],
+                ]
+                for item in payload["ports"]
+            ],
+        )
+    )
+    if payload["findings"]:
+        print()
+        print(
+            table(
+                ["Severity", "Type", "Detail"],
+                [
+                    [item["severity"], item["type"], item["detail"]]
+                    for item in payload["findings"]
+                ],
+            )
+        )
 
 
 def show_dns(host: str, json_output: bool = False) -> None:
@@ -2606,6 +3265,24 @@ def print_shell_help() -> None:
                 ["ioc list|add|remove|hunt", "store and hunt indicators of compromise"],
                 ["ports [limit]", "show listening local ports and services"],
                 ["netstat [limit]", "show local network connections"],
+                [
+                    "live [seconds]",
+                    "real-time local connection monitor and anomaly hints",
+                ],
+                [
+                    "live learn [seconds]",
+                    "learn a baseline from current local connections",
+                ],
+                [
+                    "scanhost <host> <ports>",
+                    "open/closed port scan for an authorized host",
+                ],
+                ["discover [cidr] [ports]", "find active devices on an authorized LAN"],
+                ["bandwidth [seconds]", "local interface bandwidth counters"],
+                [
+                    "webscan <url> [ports]",
+                    "scan website DNS, HTTP/TLS metadata, and selected ports",
+                ],
                 ["port <number>", "explain a port and show local matches"],
                 [
                     "probe <host> <ports>",
@@ -2823,6 +3500,33 @@ def run_shell_command(raw: str) -> bool:
         show_netstat(
             only_listening=False, limit=parse_count_limit(args[0] if args else None, 40)
         )
+    elif command == "live":
+        learn_live = bool(args and args[0].lower() == "learn")
+        offset = 1 if learn_live else 0
+        show_live(
+            duration=parse_count_limit(
+                args[offset] if len(args) > offset else None, 10
+            ),
+            learn=learn_live,
+        )
+    elif command == "scanhost":
+        if len(args) < 2:
+            print("usage: scanhost <host> <ports|common>")
+        else:
+            show_scanhost(args[0], args[1])
+    elif command == "discover":
+        show_discover(
+            args[0] if args else None,
+            limit=254,
+            ports_text=args[1] if len(args) > 1 else None,
+        )
+    elif command == "bandwidth":
+        show_bandwidth(duration=parse_count_limit(args[0] if args else None, 5))
+    elif command == "webscan":
+        if not args:
+            print("usage: webscan <url-or-domain> [ports|common]")
+        else:
+            show_webscan(args[0], args[1] if len(args) > 1 else "80,443,8080,8443")
     elif command == "port":
         if not args:
             print("usage: port <number>")
@@ -2974,6 +3678,49 @@ def build_parser() -> argparse.ArgumentParser:
     ports_parser = subparsers.add_parser("ports", help="Show local listening ports.")
     ports_parser.add_argument("--limit", type=int, default=40)
 
+    live_parser = subparsers.add_parser(
+        "live", help="Monitor current local network connections."
+    )
+    live_parser.add_argument("--duration", type=int, default=10)
+    live_parser.add_argument("--interval", type=float, default=2.0)
+    live_parser.add_argument(
+        "--learn",
+        action="store_true",
+        help="Learn a live baseline instead of only monitoring.",
+    )
+
+    scanhost_parser = subparsers.add_parser(
+        "scanhost", help="Authorized open/closed port scan for one host."
+    )
+    scanhost_parser.add_argument("host")
+    scanhost_parser.add_argument(
+        "ports", help="Port list, range, or 'common'. Example: 22,80,443 or 1-1024"
+    )
+
+    discover_parser = subparsers.add_parser(
+        "discover", help="Find active devices on an authorized LAN/CIDR."
+    )
+    discover_parser.add_argument("cidr", nargs="?", default=None)
+    discover_parser.add_argument("--limit", type=int, default=254)
+    discover_parser.add_argument(
+        "--ports", help="Optionally scan discovered devices for these ports."
+    )
+
+    bandwidth_parser = subparsers.add_parser(
+        "bandwidth", help="Show local interface bandwidth counters."
+    )
+    bandwidth_parser.add_argument("--duration", type=int, default=5)
+
+    webscan_parser = subparsers.add_parser(
+        "webscan", help="Scan website DNS, HTTP/TLS metadata, and selected ports."
+    )
+    webscan_parser.add_argument(
+        "target", help="URL or hostname, e.g. https://example.com"
+    )
+    webscan_parser.add_argument(
+        "--ports", default="80,443,8080,8443", help="Port list/range or 'common'."
+    )
+
     port_parser = subparsers.add_parser(
         "port", help="Explain a port and show local matches."
     )
@@ -3088,6 +3835,21 @@ def main(argv: list[str] | None = None) -> int:
             show_netstat(args.json, only_listening=args.listening, limit=args.limit)
         elif args.command == "ports":
             show_netstat(args.json, only_listening=True, limit=args.limit)
+        elif args.command == "live":
+            show_live(
+                args.json,
+                duration=args.duration,
+                interval=args.interval,
+                learn=args.learn,
+            )
+        elif args.command == "scanhost":
+            show_scanhost(args.host, args.ports, args.json)
+        elif args.command == "discover":
+            show_discover(args.cidr, args.json, limit=args.limit, ports_text=args.ports)
+        elif args.command == "bandwidth":
+            show_bandwidth(args.json, duration=args.duration)
+        elif args.command == "webscan":
+            show_webscan(args.target, args.ports, args.json)
         elif args.command == "port":
             show_port(args.number, args.json)
         elif args.command == "probe":

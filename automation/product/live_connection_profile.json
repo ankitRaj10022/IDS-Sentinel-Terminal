@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "created_at": "2026-06-02T04:50:03+00:00",
+  "duration_seconds": 1,
+  "interval_seconds": 1.0,
+  "snapshots": 1,
+  "max_connections": 20,
+  "max_listening": 20,
+  "known_remote_hosts": [],
+  "known_local_ports": [
+    "53",
+    "67",
+    "323",
+    "631",
+    "1716",
+    "5353",
+    "36131",
+    "50136",
+    "59321"
+  ],
+  "known_remote_ports": [],
+  "top_remote_hosts": {},
+  "top_local_ports": {
+    "53": 6,
+    "5353": 4,
+    "323": 2,
+    "1716": 2,
+    "631": 2,
+    "67": 1,
+    "59321": 1,
+    "36131": 1,
+    "50136": 1
+  },
+  "top_remote_ports": {}
+}

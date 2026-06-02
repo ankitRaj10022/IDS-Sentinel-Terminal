@@ -65,7 +65,7 @@ python scripts\build_distributions.py
 Install the wheel locally:
 
 ```bash
-pipx install dist/ids_sentinel_terminal-0.2.2-py3-none-any.whl
+pipx install dist/ids_sentinel_terminal-0.3.0-py3-none-any.whl
 ids-sentinel --version
 ids-sentinel status
 ```
@@ -74,7 +74,7 @@ ids-sentinel status
 
 Once the branch is pushed and the pending publisher is configured:
 
-1. Create a Git tag such as `v0.2.2`.
+1. Create a Git tag such as `v0.3.0`.
 2. Publish a GitHub Release for that tag.
 3. GitHub Actions will:
    - build the wheel and source distribution
