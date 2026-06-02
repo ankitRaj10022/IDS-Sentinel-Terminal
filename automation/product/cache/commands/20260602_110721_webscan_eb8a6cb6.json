@@ -1,0 +1,127 @@
+{
+  "created_at": "2026-06-02T05:37:21+00:00",
+  "kind": "webscan",
+  "payload": {
+    "target": "https://theuselessweb.com",
+    "hostname": "theuselessweb.com",
+    "created_at": "2026-06-02T05:37:21+00:00",
+    "dns": {
+      "canonical": "theuselessweb.com",
+      "aliases": [],
+      "addresses": [
+        "52.74.6.109",
+        "13.215.239.219"
+      ]
+    },
+    "ports": [
+      {
+        "host": "theuselessweb.com",
+        "port": 80,
+        "service": "http",
+        "status": "open",
+        "elapsed_ms": 94.31
+      },
+      {
+        "host": "theuselessweb.com",
+        "port": 443,
+        "service": "https",
+        "status": "open",
+        "elapsed_ms": 99.1
+      }
+    ],
+    "http": [
+      {
+        "url": "https://theuselessweb.com/",
+        "status": 200,
+        "reason": "OK",
+        "headers": {
+          "Accept-Ranges": "bytes",
+          "Age": "39245",
+          "Cache-Control": "public,max-age=0,must-revalidate",
+          "Cache-Status": "\"Netlify Edge\"; hit",
+          "Content-Length": "6130",
+          "Content-Type": "text/html; charset=UTF-8",
+          "Date": "Tue, 02 Jun 2026 05:37:19 GMT",
+          "Etag": "\"22e76e4fcb10a8ef472e2ef2654fae05-ssl\"",
+          "Server": "Netlify",
+          "Strict-Transport-Security": "max-age=31536000",
+          "X-Nf-Request-Id": "01KT3DC7E9V0JZGZ80HPMAJGPH",
+          "Connection": "close"
+        },
+        "sample_bytes": 4096
+      },
+      {
+        "url": "https://theuselessweb.com/",
+        "status": 200,
+        "reason": "OK",
+        "headers": {
+          "Accept-Ranges": "bytes",
+          "Age": "39246",
+          "Cache-Control": "public,max-age=0,must-revalidate",
+          "Cache-Status": "\"Netlify Edge\"; hit",
+          "Content-Length": "6130",
+          "Content-Type": "text/html; charset=UTF-8",
+          "Date": "Tue, 02 Jun 2026 05:37:20 GMT",
+          "Etag": "\"22e76e4fcb10a8ef472e2ef2654fae05-ssl\"",
+          "Server": "Netlify",
+          "Strict-Transport-Security": "max-age=31536000",
+          "X-Nf-Request-Id": "01KT3DC7QQWVHS892Q461TSWBZ",
+          "Connection": "close"
+        },
+        "sample_bytes": 4096
+      }
+    ],
+    "tls": {
+      "subject": [
+        [
+          [
+            "commonName",
+            "theuselessweb.com"
+          ]
+        ]
+      ],
+      "issuer": [
+        [
+          [
+            "countryName",
+            "US"
+          ]
+        ],
+        [
+          [
+            "organizationName",
+            "Let's Encrypt"
+          ]
+        ],
+        [
+          [
+            "commonName",
+            "E8"
+          ]
+        ]
+      ],
+      "not_before": "Apr 28 04:48:59 2026 GMT",
+      "not_after": "Jul 27 04:48:58 2026 GMT",
+      "version": 3,
+      "serial_number": "0651A7554D655952511878D0C1171783A337",
+      "cipher": [
+        "TLS_AES_128_GCM_SHA256",
+        "TLSv1.3",
+        128
+      ]
+    },
+    "findings": [
+      {
+        "severity": "low",
+        "type": "missing_csp",
+        "detail": "HTTPS response did not include Content-Security-Policy"
+      },
+      {
+        "severity": "low",
+        "type": "missing_csp",
+        "detail": "HTTPS response did not include Content-Security-Policy"
+      }
+    ],
+    "report_path": "automation/product/website_reports/theuselessweb.com_20260602_110721.txt"
+  }
+}

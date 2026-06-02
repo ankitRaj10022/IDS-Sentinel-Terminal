@@ -1,23 +1,39 @@
 from __future__ import annotations
 
 import numpy as np
-from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, precision_score, recall_score
 
 
 def binary_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float | int]:
     y_true = np.asarray(y_true).astype(int).reshape(-1)
     y_pred = np.asarray(y_pred).astype(int).reshape(-1)
-    tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
+    if y_true.size != y_pred.size:
+        raise ValueError(
+            f"metric arrays must have same length: y_true={y_true.size}, y_pred={y_pred.size}"
+        )
+
+    tp = int(np.sum((y_true == 1) & (y_pred == 1)))
+    tn = int(np.sum((y_true == 0) & (y_pred == 0)))
+    fp = int(np.sum((y_true == 0) & (y_pred == 1)))
+    fn = int(np.sum((y_true == 1) & (y_pred == 0)))
+
+    support = int(y_true.size)
+    accuracy = (tp + tn) / support if support else 0.0
+    precision = tp / (tp + fp) if (tp + fp) else 0.0
+    recall = tp / (tp + fn) if (tp + fn) else 0.0
+    f1 = (
+        (2 * precision * recall / (precision + recall)) if (precision + recall) else 0.0
+    )
+
     return {
-        "accuracy": round(float(accuracy_score(y_true, y_pred)), 6),
-        "precision": round(float(precision_score(y_true, y_pred, zero_division=0)), 6),
-        "recall": round(float(recall_score(y_true, y_pred, zero_division=0)), 6),
-        "f1": round(float(f1_score(y_true, y_pred, zero_division=0)), 6),
-        "support": int(y_true.size),
-        "tp": int(tp),
-        "tn": int(tn),
-        "fp": int(fp),
-        "fn": int(fn),
+        "accuracy": round(float(accuracy), 6),
+        "precision": round(float(precision), 6),
+        "recall": round(float(recall), 6),
+        "f1": round(float(f1), 6),
+        "support": support,
+        "tp": tp,
+        "tn": tn,
+        "fp": fp,
+        "fn": fn,
     }
 
 
@@ -30,4 +46,3 @@ def probability_summary(values: np.ndarray | None) -> dict[str, float] | None:
         "mean": round(float(flattened.mean()), 6),
         "max": round(float(flattened.max()), 6),
     }
-

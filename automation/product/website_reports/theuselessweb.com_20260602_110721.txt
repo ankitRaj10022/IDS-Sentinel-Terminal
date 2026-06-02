@@ -1,0 +1,46 @@
+IDS Sentinel Website Scan Report
+================================
+Target: https://theuselessweb.com
+Hostname: theuselessweb.com
+Created: 2026-06-02T05:37:21+00:00
+
+Safety note: Use website scanning only on domains you own or are authorized to assess.
+
+DNS
+---
+Canonical: theuselessweb.com
+Aliases: 
+Addresses: 52.74.6.109, 13.215.239.219
+
+Ports
+-----
+   80 http           open    94.31 ms
+  443 https          open    99.1 ms
+
+HTTP/HTTPS
+----------
+URL: https://theuselessweb.com/
+  Status: 200 OK
+  Server: Netlify
+  Content-Type: text/html; charset=UTF-8
+  Content-Length: 6130
+  Strict-Transport-Security: max-age=31536000
+
+URL: https://theuselessweb.com/
+  Status: 200 OK
+  Server: Netlify
+  Content-Type: text/html; charset=UTF-8
+  Content-Length: 6130
+  Strict-Transport-Security: max-age=31536000
+
+TLS Certificate
+---------------
+Not Before: Apr 28 04:48:59 2026 GMT
+Not After:  Jul 27 04:48:58 2026 GMT
+Cipher:     ('TLS_AES_128_GCM_SHA256', 'TLSv1.3', 128)
+Issuer:     ((('countryName', 'US'),), (('organizationName', "Let's Encrypt"),), (('commonName', 'E8'),))
+
+Findings
+--------
+[low] missing_csp: HTTPS response did not include Content-Security-Policy
+[low] missing_csp: HTTPS response did not include Content-Security-Policy
