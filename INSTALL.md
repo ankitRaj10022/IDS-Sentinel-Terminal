@@ -1,4 +1,4 @@
-# IDS Sentinel Terminal Pitch Install Guide
+# IDS Sentinel Terminal Install Guide
 
 `pip install ids-sentinel-terminal` only works after the package is published on PyPI. As of this build, PyPI has no public `ids-sentinel-terminal` package, so pip correctly reports:
 
