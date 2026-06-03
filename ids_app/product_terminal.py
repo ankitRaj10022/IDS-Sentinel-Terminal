@@ -86,6 +86,9 @@ LEGACY_INDEX_DIR = PRODUCT_DIR / "indexes"
 MODEL_PATH = PRODUCT_DIR / "self_learning_model.json"
 IOC_PATH = PRODUCT_DIR / "iocs.json"
 LIVE_MODEL_PATH = PRODUCT_DIR / "live_connection_profile.json"
+INTRUSION_REPORTS_DIR = PRODUCT_DIR / "intrusion_reports"
+
+_LAST_NETSTAT_ERROR: str | None = None
 
 SHELL_STATE = {"cwd": ROOT_DIR, "history": []}
 
@@ -256,6 +259,7 @@ def ensure_product_dirs() -> None:
         PRODUCT_DIR,
         EXPORTS_DIR,
         WEB_REPORTS_DIR,
+        INTRUSION_REPORTS_DIR,
         IMPORTS_DIR,
         CACHE_DIR,
         INDEX_DIR,
@@ -747,8 +751,7 @@ def classify_behavior(
     if (
         values["num_failed_logins"] > 0
         or values["is_guest_login"] > 0
-        or values["logged_in"] == 0
-        and values["hot"] >= 2
+        or (values["logged_in"] == 0 and values["hot"] >= 2)
     ):
         families.append("credential_abuse")
         reasons.append("login or credential anomaly")
@@ -1506,11 +1509,16 @@ def parse_unix_ss() -> list[dict[str, Any]]:
 
 
 def parse_netstat() -> list[dict[str, Any]]:
+    global _LAST_NETSTAT_ERROR
+    _LAST_NETSTAT_ERROR = None
     try:
         if os.name == "nt":
             return parse_windows_netstat()
         return parse_unix_ss()
     except FileNotFoundError:
+        _LAST_NETSTAT_ERROR = (
+            "Network tools not found. On Linux install iproute2 (ss) or net-tools (netstat)."
+        )
         return []
 
 
@@ -1531,7 +1539,10 @@ def show_netstat(
         return
     section("Network Connections")
     if not payload:
-        print("No netstat rows found.")
+        if _LAST_NETSTAT_ERROR:
+            print(_LAST_NETSTAT_ERROR)
+        else:
+            print("No netstat rows found.")
         return
     print(
         table(
@@ -1691,6 +1702,491 @@ def analyze_live_connections(
     return payload
 
 
+INTRUSION_PREVENTION_GUIDE: dict[str, dict[str, str]] = {
+    "ioc_match": {
+        "title": "Indicator of compromise on live traffic",
+        "impact": "Your PC may be talking to attacker infrastructure, malware C2, or a blocklisted host.",
+        "prevention": "Block the remote IP in your firewall, stop the matching process, run 'filescan' on suspicious binaries, add parent IOCs with 'ioc add', and isolate the host if impact is unclear.",
+    },
+    "exposed_listener": {
+        "title": "Sensitive service listening on all interfaces",
+        "impact": "Anyone on your LAN or the internet (if port-forwarded) can reach admin, database, or remote-access services on this PC.",
+        "prevention": "Bind services to localhost only, enable host firewall (ufw/firewalld), close unused ports, require VPN for admin access, and patch exposed services.",
+    },
+    "public_inbound": {
+        "title": "Inbound session from the public internet",
+        "impact": "A remote host on the internet has an active session to this PC; could be legitimate remote access or unauthorized control.",
+        "prevention": "Verify the remote IP and owning process PID, restrict RDP/SSH to VPN or allow-lists, enable fail2ban, and log out unknown sessions.",
+    },
+    "connection_burst": {
+        "title": "Many connections from one remote host",
+        "impact": "Possible port scan, brute force, or C2 beaconing from a single peer.",
+        "prevention": "Rate-limit at firewall, block the source IP temporarily, capture traffic for review, and compare with 'live learn' baseline.",
+    },
+    "auth_brute_force": {
+        "title": "SSH/login brute-force attempts",
+        "impact": "Attackers may gain shell access if passwords are weak or keys are exposed.",
+        "prevention": "Disable password SSH, use keys only, enable fail2ban, change SSH port, restrict by IP, and review /var/log/auth.log or journalctl -t sshd.",
+    },
+    "profile_anomaly": {
+        "title": "Deviation from learned live baseline",
+        "impact": "New hosts or ports may mean lateral movement, new malware, or unauthorized software.",
+        "prevention": "Run 'live learn' on a known-good period, then 'intrusions' regularly; investigate new PIDs with 'ps' and 'filescan'.",
+    },
+    "sensitive_port_active": {
+        "title": "Active use of high-risk port",
+        "impact": "Database, Docker API, Redis, RDP, or similar services are in use and may be attack targets.",
+        "prevention": "Ensure authentication, never expose to WAN without VPN, segment the network, and monitor with 'port <n>'.",
+    },
+}
+
+
+def is_public_ip(host: str) -> bool:
+    if not host or host in {"*", "0.0.0.0", "::", "*:*"}:
+        return False
+    try:
+        addr = ipaddress.ip_address(host.strip("[]"))
+    except ValueError:
+        return False
+    return not (
+        addr.is_private
+        or addr.is_loopback
+        or addr.is_link_local
+        or addr.is_reserved
+        or addr.is_multicast
+    )
+
+
+def is_wildcard_bind(host: str) -> bool:
+    normalized = (host or "").strip("[]").lower()
+    return normalized in {"", "*", "0.0.0.0", "::"}
+
+
+def intrusion_finding(
+    severity: str,
+    finding_type: str,
+    location: str,
+    possibility: str,
+    *,
+    impact: str | None = None,
+    prevention: str | None = None,
+) -> dict[str, str]:
+    guide = INTRUSION_PREVENTION_GUIDE.get(finding_type, {})
+    return {
+        "severity": severity,
+        "type": finding_type,
+        "location": location,
+        "possibility": possibility,
+        "impact": impact or guide.get("impact", "May affect confidentiality, integrity, or availability of this host."),
+        "prevention": prevention or guide.get("prevention", "Investigate the location, verify the process, and restrict network exposure."),
+    }
+
+
+def match_connection_iocs(
+    rows: list[dict[str, Any]], iocs: list[dict[str, Any]]
+) -> list[dict[str, str]]:
+    if not iocs:
+        return []
+    ip_values = {
+        item["value"]
+        for item in iocs
+        if item.get("type") == "ip" and item.get("value")
+    }
+    port_values = {
+        str(item["value"])
+        for item in iocs
+        if item.get("type") == "port" and item.get("value")
+    }
+    findings: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for row in rows:
+        remote_host = str(row.get("remote_host") or "")
+        remote_port = str(row.get("remote_port") or "")
+        if remote_host in ip_values:
+            key = f"ip:{remote_host}:{row.get('local')}:{row.get('pid')}"
+            if key in seen:
+                continue
+            seen.add(key)
+            findings.append(
+                intrusion_finding(
+                    "critical",
+                    "ioc_match",
+                    f"{row.get('proto')} {row.get('local')} -> {row.get('remote')} pid={row.get('pid') or 'n/a'}",
+                    f"Remote IP {remote_host} matches a stored IOC",
+                )
+            )
+        if remote_port in port_values:
+            key = f"port:{remote_port}:{row.get('remote')}"
+            if key in seen:
+                continue
+            seen.add(key)
+            findings.append(
+                intrusion_finding(
+                    "high",
+                    "ioc_match",
+                    f"{row.get('proto')} {row.get('local')} -> {row.get('remote')} pid={row.get('pid') or 'n/a'}",
+                    f"Remote port {remote_port} matches a stored IOC",
+                )
+            )
+    return findings
+
+
+def analyze_connections_for_intrusions(
+    rows: list[dict[str, Any]],
+    profile: dict[str, Any] | None = None,
+    iocs: list[dict[str, Any]] | None = None,
+) -> list[dict[str, str]]:
+    findings = match_connection_iocs(rows, iocs or [])
+    active_states = {"ESTAB", "ESTABLISHED", "SYN_SENT", "SYN_RECV", "TIME_WAIT"}
+    established = [
+        row
+        for row in rows
+        if str(row.get("state") or "").upper() in active_states
+    ]
+
+    for row in rows:
+        state = str(row.get("state") or "").upper()
+        if state not in {"LISTEN", "LISTENING", "UDP"}:
+            continue
+        local_port = row.get("local_port")
+        if not isinstance(local_port, int) or local_port not in COMMON_PORT_RISKS:
+            continue
+        if is_wildcard_bind(str(row.get("local_host") or "")):
+            findings.append(
+                intrusion_finding(
+                    "high",
+                    "exposed_listener",
+                    f"{row.get('proto')} listening on {row.get('local')} ({COMMON_PORT_RISKS[local_port][:60]}...)",
+                    f"Port {local_port} accepts connections on all interfaces",
+                )
+            )
+
+    remote_counts: Counter[str] = Counter()
+    for row in established:
+        host = str(row.get("remote_host") or "")
+        if host and host not in {"*", "0.0.0.0", "::"}:
+            remote_counts[host] += 1
+    for host, count in remote_counts.items():
+        if count >= 12:
+            findings.append(
+                intrusion_finding(
+                    "high" if count >= 25 else "medium",
+                    "connection_burst",
+                    f"remote host {host} ({count} active sockets)",
+                    f"{count} simultaneous connections from one peer",
+                )
+            )
+
+    for row in established:
+        remote_host = str(row.get("remote_host") or "")
+        remote_port = row.get("remote_port")
+        local_port = row.get("local_port")
+        service_local = isinstance(local_port, int) and (
+            local_port in COMMON_PORT_RISKS or local_port <= 1024
+        )
+        if is_public_ip(remote_host) and service_local:
+            findings.append(
+                intrusion_finding(
+                    "medium",
+                    "public_inbound",
+                    f"{row.get('proto')} {row.get('local')} <- {row.get('remote')} pid={row.get('pid') or 'n/a'}",
+                    f"Public internet host {remote_host} has a session to local service port {local_port}",
+                )
+            )
+        if isinstance(local_port, int) and local_port in COMMON_PORT_RISKS:
+            findings.append(
+                intrusion_finding(
+                    "medium",
+                    "sensitive_port_active",
+                    f"{row.get('proto')} {row.get('local')} -> {row.get('remote')} pid={row.get('pid') or 'n/a'}",
+                    f"Local service port {local_port} in use: {COMMON_PORT_RISKS[local_port][:80]}",
+                )
+            )
+        elif (
+            isinstance(remote_port, int)
+            and remote_port in COMMON_PORT_RISKS
+            and remote_port not in {80, 443}
+            and isinstance(local_port, int)
+            and local_port > 1024
+        ):
+            findings.append(
+                intrusion_finding(
+                    "medium",
+                    "sensitive_port_active",
+                    f"{row.get('proto')} {row.get('local')} -> {row.get('remote')} pid={row.get('pid') or 'n/a'}",
+                    f"Outbound connection to sensitive remote port {remote_port}",
+                )
+            )
+
+    if profile:
+        live_payload = analyze_live_connections(rows, profile)
+        for item in live_payload.get("findings", []):
+            findings.append(
+                intrusion_finding(
+                    str(item.get("severity") or "low"),
+                    "profile_anomaly",
+                    str(item.get("detail") or item.get("type") or "baseline deviation"),
+                    f"Live baseline anomaly: {item.get('type', 'unknown')}",
+                )
+            )
+
+    severity_rank = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+    deduped: list[dict[str, str]] = []
+    seen_keys: set[tuple[str, str, str]] = set()
+    for item in sorted(
+        findings, key=lambda row: severity_rank.get(row["severity"], 9)
+    ):
+        key = (item["type"], item["location"], item["possibility"])
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        deduped.append(item)
+    return deduped[:80]
+
+
+def collect_auth_intrusions(limit: int = 20) -> list[dict[str, str]]:
+    if os.name == "nt":
+        return []
+    lines: list[str] = []
+    try:
+        completed = subprocess.run(
+            [
+                "journalctl",
+                "-t",
+                "sshd",
+                "--since",
+                "24 hours ago",
+                "-o",
+                "cat",
+                "--no-pager",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+        if completed.returncode == 0 and completed.stdout.strip():
+            lines = completed.stdout.splitlines()
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        pass
+    if not lines:
+        for log_path in (Path("/var/log/auth.log"), Path("/var/log/secure")):
+            if not log_path.exists():
+                continue
+            try:
+                with log_path.open("r", encoding="utf-8", errors="ignore") as handle:
+                    lines = handle.readlines()[-8000:]
+                break
+            except OSError:
+                continue
+    failed_by_ip: Counter[str] = Counter()
+    for line in lines:
+        lowered = line.lower()
+        if not any(
+            token in lowered
+            for token in (
+                "failed password",
+                "failed publickey",
+                "invalid user",
+                "authentication failure",
+            )
+        ):
+            continue
+        ip_match = re.search(
+            r"\b(?:from|FROM)\s+(\d{1,3}(?:\.\d{1,3}){3})\b", line
+        )
+        if ip_match:
+            failed_by_ip[ip_match.group(1)] += 1
+    findings: list[dict[str, str]] = []
+    for ip, count in failed_by_ip.most_common(limit):
+        if count < 5:
+            continue
+        findings.append(
+            intrusion_finding(
+                "critical" if count >= 20 else "high" if count >= 10 else "medium",
+                "auth_brute_force",
+                f"ssh/auth log source {ip}",
+                f"{count} failed SSH/login attempts in the last day",
+            )
+        )
+    return findings
+
+
+def scan_network_intrusions(
+    duration: int = 8,
+    interval: float = 1.5,
+    include_auth: bool = True,
+) -> dict[str, Any]:
+    ensure_product_dirs()
+    profile = read_json(LIVE_MODEL_PATH)
+    iocs = read_iocs()
+    snapshots: list[dict[str, Any]] = []
+    all_rows: list[dict[str, Any]] = []
+    end_time = time.time() + max(duration, 1)
+    while time.time() < end_time:
+        rows = parse_netstat()
+        all_rows = rows
+        snapshot_findings = analyze_connections_for_intrusions(rows, profile, iocs)
+        snapshots.append(
+            {
+                "at": utc_now(),
+                "connections": len(rows),
+                "findings": len(snapshot_findings),
+            }
+        )
+        time.sleep(max(interval, 0.3))
+
+    connection_findings = analyze_connections_for_intrusions(all_rows, profile, iocs)
+    auth_findings = collect_auth_intrusions() if include_auth else []
+    findings = connection_findings + auth_findings
+    severity_rank = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+    findings = sorted(
+        findings, key=lambda row: severity_rank.get(row["severity"], 9)
+    )[:100]
+    summary = summarize_live_connections(all_rows)
+    counts = Counter(item["severity"] for item in findings)
+    return {
+        "scanned_at": utc_now(),
+        "duration_seconds": duration,
+        "interval_seconds": interval,
+        "host": socket.gethostname(),
+        "netstat_warning": _LAST_NETSTAT_ERROR,
+        "connection_summary": summary,
+        "snapshots": snapshots,
+        "ioc_count": len(iocs),
+        "profile_available": bool(profile),
+        "finding_counts": dict(counts),
+        "findings": findings,
+        "note": "Defensive host triage only. No packets are captured. Use only on systems and networks you own or are authorized to test.",
+    }
+
+
+def intrusion_report_text(payload: dict[str, Any]) -> str:
+    lines = [
+        "IDS Sentinel Terminal — Network Intrusion Scan",
+        f"Host: {payload.get('host', 'n/a')}",
+        f"Scanned: {payload.get('scanned_at', 'n/a')}",
+        f"Duration: {payload.get('duration_seconds', 0)}s",
+        "",
+    ]
+    if payload.get("netstat_warning"):
+        lines.extend([f"Warning: {payload['netstat_warning']}", ""])
+    lines.append(
+        f"Findings: {sum(payload.get('finding_counts', {}).values())} "
+        f"({payload.get('finding_counts', {})})"
+    )
+    lines.append("")
+    for index, item in enumerate(payload.get("findings", []), start=1):
+        lines.extend(
+            [
+                f"{index}. [{item['severity'].upper()}] {item['type']}",
+                f"   Location:    {item['location']}",
+                f"   Possibility: {item['possibility']}",
+                f"   Impact:      {item['impact']}",
+                f"   Prevention:  {item['prevention']}",
+                "",
+            ]
+        )
+    if not payload.get("findings"):
+        lines.append("No network intrusion indicators detected in this scan window.")
+    lines.append(payload.get("note", ""))
+    return "\n".join(lines).strip() + "\n"
+
+
+def write_intrusion_report(payload: dict[str, Any]) -> tuple[Path, Path]:
+    ensure_product_dirs()
+    stamp = compact_timestamp()
+    json_path = INTRUSION_REPORTS_DIR / f"intrusions_{stamp}.json"
+    text_path = INTRUSION_REPORTS_DIR / f"intrusions_{stamp}.txt"
+    write_json(json_path, payload)
+    text_path.write_text(intrusion_report_text(payload), encoding="utf-8")
+    return json_path, text_path
+
+
+def show_intrusion_guide(json_output: bool = False) -> None:
+    payload = {"guide": INTRUSION_PREVENTION_GUIDE}
+    if json_output:
+        print_json(payload)
+        return
+    section("Intrusion Prevention Guide")
+    for key, item in INTRUSION_PREVENTION_GUIDE.items():
+        print(f"\n[{key}] {item['title']}")
+        print(f"  Impact:     {item['impact']}")
+        print(f"  Prevention: {item['prevention']}")
+
+
+def show_intrusions(
+    json_output: bool = False,
+    duration: int = 8,
+    interval: float = 1.5,
+    include_auth: bool = True,
+    export_report: bool = False,
+    show_guide: bool = False,
+) -> None:
+    if show_guide:
+        show_intrusion_guide(json_output)
+        return
+    payload = scan_network_intrusions(
+        duration=duration,
+        interval=interval,
+        include_auth=include_auth,
+    )
+    if export_report:
+        json_path, text_path = write_intrusion_report(payload)
+        payload["report_json"] = relative_path(json_path)
+        payload["report_text"] = relative_path(text_path)
+    cache_artifact("intrusions", payload)
+    if json_output:
+        print_json(payload)
+        return
+
+    section("Network Intrusion Scan")
+    print(payload["note"])
+    print(
+        f"Host: {payload['host']} | connections: {payload['connection_summary']['connection_count']} | IOCs loaded: {payload['ioc_count']}"
+    )
+    if payload.get("netstat_warning"):
+        print(f"Warning: {payload['netstat_warning']}")
+    if payload.get("report_text"):
+        print(f"Report saved: {payload['report_text']}")
+
+    counts = payload.get("finding_counts", {})
+    print(
+        f"Findings: {sum(counts.values())} — "
+        + ", ".join(f"{key}: {value}" for key, value in sorted(counts.items()))
+        if counts
+        else "Findings: 0"
+    )
+
+    if not payload["findings"]:
+        section("Result")
+        print("No network intrusion indicators detected in this scan window.")
+        print("Tip: run 'live learn 30' to baseline normal traffic, then 'intrusions' again.")
+        print("Tip: add known-bad IPs with 'ioc add <ip> ip' to flag active sessions.")
+        return
+
+    print(
+        table(
+            ["Severity", "Type", "Location", "Possibility"],
+            [
+                [
+                    item["severity"],
+                    item["type"],
+                    item["location"][:48],
+                    item["possibility"][:56],
+                ]
+                for item in payload["findings"][:40]
+            ],
+        )
+    )
+
+    section("Impact And Prevention (top findings)")
+    for item in payload["findings"][:8]:
+        print(f"\n[{item['severity']}] {item['type']} @ {item['location']}")
+        print(f"  Impact:     {item['impact']}")
+        print(f"  Prevention: {item['prevention']}")
+
+
 def show_live(
     json_output: bool = False,
     duration: int = 10,
@@ -1826,7 +2322,7 @@ def show_probe(host: str, ports_text: str, json_output: bool = False) -> None:
             [
                 [
                     item["host"],
-                    item["port"],
+                    str(item["port"]),
                     item["service"],
                     item["status"],
                     item["elapsed_ms"],
@@ -1979,7 +2475,7 @@ def show_scanhost(host: str, ports_text: str, json_output: bool = False) -> None
         table(
             ["Port", "Service", "Status", "ms"],
             [
-                [item["port"], item["service"], item["status"], item["elapsed_ms"]]
+                [str(item["port"]), item["service"], item["status"], item["elapsed_ms"]]
                 for item in payload["ports"]
             ],
         )
@@ -2274,7 +2770,7 @@ def show_webscan(
             ["Port", "Service", "Status", "ms"],
             [
                 [
-                    item["port"],
+                    str(item["port"]),
                     item.get("service", ""),
                     item["status"],
                     item["elapsed_ms"],
@@ -3224,6 +3720,9 @@ def print_startup_banner() -> None:
         f"  {colorize('scan kddtest.csv 5000', '1;32')} analyze traffic and export CSV/JSON reports"
     )
     print(f"  {colorize('ioc list', '1;32')}      manage indicators of compromise")
+    print(
+        f"  {colorize('intrusions', '1;32')}   scan live network for intrusion indicators"
+    )
     print(f"  {colorize('help', '1;32')}          show all commands")
     print(f"  {colorize('exit', '1;32')}          quit")
     print()
@@ -3263,6 +3762,14 @@ def print_shell_help() -> None:
                     "search datasets, imports, and exported reports",
                 ],
                 ["ioc list|add|remove|hunt", "store and hunt indicators of compromise"],
+                [
+                    "intrusions [seconds] [export]",
+                    "scan network intrusions, impact, and prevention on this PC",
+                ],
+                [
+                    "intrusions guide",
+                    "show prevention guide for all intrusion types",
+                ],
                 ["ports [limit]", "show listening local ports and services"],
                 ["netstat [limit]", "show local network connections"],
                 [
@@ -3431,8 +3938,20 @@ def run_shell_command(raw: str) -> bool:
         show_malware(limit=parse_count_limit(args[0] if args else None, 5000))
     elif command == "learn":
         mode = args[0].lower() if args else "full"
-        limit = 20000 if mode == "quick" else None
-        show_learn(learn_model(limit=limit, include_generated=True))
+        include_test = any(
+            token in {"--include-test", "test"} for token in args
+        )
+        skip_generated = any(
+            token in {"--skip-generated", "no-exports"} for token in args
+        )
+        limit = 20000 if mode == "quick" or "quick" in args else None
+        show_learn(
+            learn_model(
+                limit=limit,
+                include_generated=not skip_generated,
+                include_test=include_test,
+            )
+        )
     elif command in {"scan", "analyze"}:
         path = resolve_readable_path(
             args[0] if args else None,
@@ -3492,6 +4011,21 @@ def run_shell_command(raw: str) -> bool:
             )
     elif command == "ioc":
         show_ioc(args)
+    elif command in {"intrusions", "intrusion", "netids", "net-intrusions"}:
+        if args and args[0].lower() == "guide":
+            show_intrusion_guide()
+        else:
+            export_report = any(
+                token in {"export", "--export"} for token in args
+            )
+            duration_arg = next(
+                (token for token in args if token.isdigit()),
+                None,
+            )
+            show_intrusions(
+                duration=int(duration_arg) if duration_arg else 8,
+                export_report=export_report,
+            )
     elif command in {"ports", "listeners"}:
         show_netstat(
             only_listening=True, limit=parse_count_limit(args[0] if args else None, 40)
@@ -3689,6 +4223,32 @@ def build_parser() -> argparse.ArgumentParser:
         help="Learn a live baseline instead of only monitoring.",
     )
 
+    intrusions_parser = subparsers.add_parser(
+        "intrusions",
+        help="Scan this host for network intrusion indicators, impact, and prevention.",
+    )
+    intrusions_parser.add_argument(
+        "--duration", type=int, default=8, help="Seconds to sample connections."
+    )
+    intrusions_parser.add_argument(
+        "--interval", type=float, default=1.5, help="Sample interval in seconds."
+    )
+    intrusions_parser.add_argument(
+        "--no-auth",
+        action="store_true",
+        help="Skip SSH/auth log brute-force checks.",
+    )
+    intrusions_parser.add_argument(
+        "--export",
+        action="store_true",
+        help="Write JSON and text reports under automation/product/intrusion_reports/.",
+    )
+    intrusions_parser.add_argument(
+        "--guide",
+        action="store_true",
+        help="Show the static intrusion prevention guide.",
+    )
+
     scanhost_parser = subparsers.add_parser(
         "scanhost", help="Authorized open/closed port scan for one host."
     )
@@ -3841,6 +4401,15 @@ def main(argv: list[str] | None = None) -> int:
                 duration=args.duration,
                 interval=args.interval,
                 learn=args.learn,
+            )
+        elif args.command == "intrusions":
+            show_intrusions(
+                args.json,
+                duration=args.duration,
+                interval=args.interval,
+                include_auth=not args.no_auth,
+                export_report=args.export,
+                show_guide=args.guide,
             )
         elif args.command == "scanhost":
             show_scanhost(args.host, args.ports, args.json)

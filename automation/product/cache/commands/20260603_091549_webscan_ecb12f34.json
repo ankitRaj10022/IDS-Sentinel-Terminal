@@ -1,0 +1,141 @@
+{
+  "created_at": "2026-06-03T03:45:49+00:00",
+  "kind": "webscan",
+  "payload": {
+    "target": "https://optical.toys/",
+    "hostname": "optical.toys",
+    "created_at": "2026-06-03T03:45:49+00:00",
+    "dns": {
+      "canonical": "optical.toys",
+      "aliases": [],
+      "addresses": [
+        "3.33.186.135",
+        "15.197.167.90"
+      ]
+    },
+    "ports": [
+      {
+        "host": "optical.toys",
+        "port": 80,
+        "service": "http",
+        "status": "open",
+        "elapsed_ms": 217.78
+      },
+      {
+        "host": "optical.toys",
+        "port": 443,
+        "service": "https",
+        "status": "open",
+        "elapsed_ms": 160.16
+      },
+      {
+        "host": "optical.toys",
+        "port": 8080,
+        "service": "http-alt",
+        "status": "closed",
+        "elapsed_ms": 2002.96
+      },
+      {
+        "host": "optical.toys",
+        "port": 8443,
+        "service": "",
+        "status": "closed",
+        "elapsed_ms": 1502.27
+      }
+    ],
+    "http": [
+      {
+        "url": "https://optical.toys/",
+        "status": 200,
+        "reason": "OK",
+        "headers": {
+          "Accept-Ranges": "bytes",
+          "Age": "34763",
+          "Cache-Control": "public,max-age=0,must-revalidate",
+          "Cache-Status": "\"Netlify Edge\"; hit",
+          "Content-Length": "25860",
+          "Content-Type": "text/html; charset=UTF-8",
+          "Date": "Wed, 03 Jun 2026 03:45:49 GMT",
+          "Etag": "\"b73a5e8d929d6a06b75cc69093acb471-ssl\"",
+          "Server": "Netlify",
+          "Strict-Transport-Security": "max-age=31536000",
+          "X-Nf-Request-Id": "01KT5SCRQ220YJM4AFZKYY04HR",
+          "Connection": "close"
+        },
+        "sample_bytes": 4096
+      },
+      {
+        "url": "https://optical.toys/",
+        "status": 200,
+        "reason": "OK",
+        "headers": {
+          "Accept-Ranges": "bytes",
+          "Age": "34763",
+          "Cache-Control": "public,max-age=0,must-revalidate",
+          "Cache-Status": "\"Netlify Edge\"; hit",
+          "Content-Length": "25860",
+          "Content-Type": "text/html; charset=UTF-8",
+          "Date": "Wed, 03 Jun 2026 03:45:49 GMT",
+          "Etag": "\"b73a5e8d929d6a06b75cc69093acb471-ssl\"",
+          "Server": "Netlify",
+          "Strict-Transport-Security": "max-age=31536000",
+          "X-Nf-Request-Id": "01KT5SCRX4CCWSNZ6TWWRYJJHP",
+          "Connection": "close"
+        },
+        "sample_bytes": 4096
+      }
+    ],
+    "tls": {
+      "subject": [
+        [
+          [
+            "commonName",
+            "optical.toys"
+          ]
+        ]
+      ],
+      "issuer": [
+        [
+          [
+            "countryName",
+            "US"
+          ]
+        ],
+        [
+          [
+            "organizationName",
+            "Let's Encrypt"
+          ]
+        ],
+        [
+          [
+            "commonName",
+            "E7"
+          ]
+        ]
+      ],
+      "not_before": "Apr  8 19:55:45 2026 GMT",
+      "not_after": "Jul  7 19:55:44 2026 GMT",
+      "version": 3,
+      "serial_number": "068842BDF158A03D12D0431C35E4118F3D8B",
+      "cipher": [
+        "TLS_AES_128_GCM_SHA256",
+        "TLSv1.3",
+        128
+      ]
+    },
+    "findings": [
+      {
+        "severity": "low",
+        "type": "missing_csp",
+        "detail": "HTTPS response did not include Content-Security-Policy"
+      },
+      {
+        "severity": "low",
+        "type": "missing_csp",
+        "detail": "HTTPS response did not include Content-Security-Policy"
+      }
+    ],
+    "report_path": "automation/product/website_reports/optical.toys_20260603_091549.txt"
+  }
+}
