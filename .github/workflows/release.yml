@@ -64,7 +64,6 @@ jobs:
             --notes "Download the Windows ZIP, Linux tarball, macOS tarball, or wheel below. These are tool-only artifacts; users do not need to clone the repository."
 
   pypi-publish:
-    if: vars.PUBLISH_TO_PYPI == 'true'
     runs-on: ubuntu-latest
     needs:
       - release-build
