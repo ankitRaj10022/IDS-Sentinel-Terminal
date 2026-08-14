@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ids-sentinel-terminal"
-version = "0.2.1"
+version = "0.2.2"
 description = "Installable CLI and GUI for IDS Sentinel Terminal traffic analysis and local triage."
 readme = "README.md"
 requires-python = ">=3.10"
