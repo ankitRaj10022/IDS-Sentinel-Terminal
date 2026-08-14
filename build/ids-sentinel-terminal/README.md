@@ -4,6 +4,10 @@ IDS Sentinel Terminal is an installable defensive CLI and GUI tool built around 
 
 The older FastAPI/Docker automation app and ML training code are still present in this repository. For end users, the recommended interface is the packaged CLI/GUI tool.
 
+## CLI Preview
+
+![IDS Sentinel Terminal CLI thumbnail](docs/images/ids-sentinel-cli-thumbnail.png)
+
 ## What This Product Does
 
 - Reads the bundled `kddtrain.csv` and `kddtest.csv` traffic datasets.
@@ -93,13 +97,13 @@ pipx install --force git+https://github.com/ankitRaj10022/IDS-Sentinel-Terminal.
 From this source checkout, install the built wheel:
 
 ```powershell
-py -3 -m pip install --user --force-reinstall .\dist\ids_sentinel_terminal-0.2.1-py3-none-any.whl
+py -3 -m pip install --user --force-reinstall .\dist\ids_sentinel_terminal-0.3.0-py3-none-any.whl
 ```
 
 On Linux/macOS from this source checkout:
 
 ```bash
-pipx install --force ./dist/ids_sentinel_terminal-0.2.1-py3-none-any.whl
+pipx install --force ./dist/ids_sentinel_terminal-0.3.0-py3-none-any.whl
 ```
 
 Once the package is published on PyPI, the cleanest setup is with `pipx`:
@@ -128,7 +132,7 @@ For local development or pre-publish testing from a source checkout, build the w
 ```powershell
 python -m pip install build
 python scripts\build_python_package.py
-pip install dist\ids_sentinel_terminal-0.2.1-py3-none-any.whl
+pip install dist\ids_sentinel_terminal-0.3.0-py3-none-any.whl
 ```
 
 For pitch-specific install commands, see `INSTALL_FOR_PITCH.md`.
@@ -314,7 +318,7 @@ Search and IOC commands:
 
 ```bash
 ids-sentinel hunt dos_flood --limit 10
-ids-sentinel ioc add 192.0.2.10 ip lab-indicator
+ids-sentinel ioc add 192.0.3.00 ip lab-indicator
 ids-sentinel ioc list
 ids-sentinel ioc hunt
 ids-sentinel ioc remove <id>
@@ -332,6 +336,33 @@ ids-sentinel probe 127.0.0.1 22,80,443
 ids-sentinel dns localhost
 ids-sentinel ps --limit 20
 ```
+
+Real-time/local-network commands added in v0.3:
+
+```bash
+# Learn a baseline from current local connections.
+ids-sentinel live --learn --duration 30
+
+# Monitor current local connections and report anomalies against the baseline.
+ids-sentinel live --duration 20 --interval 2
+
+# Scan open/closed ports on a host you own or are authorized to test.
+ids-sentinel scanhost 192.168.1.10 common
+ids-sentinel scanhost 192.168.1.10 22,80,443,8000-8100
+
+# Discover active devices on an authorized LAN/CIDR.
+ids-sentinel discover 192.168.1.0/24
+ids-sentinel discover 192.168.1.0/24 --ports 22,80,443
+
+# Show local machine interface bandwidth counters.
+ids-sentinel bandwidth --duration 5
+```
+
+Notes:
+
+- `scanhost`, `discover`, and `probe` are for systems/networks you own or are authorized to assess.
+- `bandwidth` currently reports local interface counters. Per-device router-wide consumption requires a router API, SNMP, UPnP, or vendor-specific integration.
+- Encrypted web/app content cannot be classified by this lightweight CLI without packet capture, TLS inspection, DNS logs, proxy logs, or router telemetry.
 
 File triage commands:
 

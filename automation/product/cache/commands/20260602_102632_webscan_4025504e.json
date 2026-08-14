@@ -1,0 +1,125 @@
+{
+  "created_at": "2026-06-02T04:56:32+00:00",
+  "kind": "webscan",
+  "payload": {
+    "target": "https://example.com",
+    "hostname": "example.com",
+    "created_at": "2026-06-02T04:56:32+00:00",
+    "dns": {
+      "canonical": "example.com",
+      "aliases": [],
+      "addresses": [
+        "172.66.147.243",
+        "104.20.23.154"
+      ]
+    },
+    "ports": [
+      {
+        "host": "example.com",
+        "port": 80,
+        "service": "http",
+        "status": "open",
+        "elapsed_ms": 64.8
+      },
+      {
+        "host": "example.com",
+        "port": 443,
+        "service": "https",
+        "status": "open",
+        "elapsed_ms": 43.53
+      }
+    ],
+    "http": [
+      {
+        "url": "http://example.com/",
+        "status": 200,
+        "reason": "OK",
+        "headers": {
+          "Date": "Tue, 02 Jun 2026 04:56:32 GMT",
+          "Content-Type": "text/html",
+          "Transfer-Encoding": "chunked",
+          "Connection": "close",
+          "Server": "cloudflare",
+          "Last-Modified": "Thu, 28 May 2026 04:54:11 GMT",
+          "Allow": "GET, HEAD",
+          "Accept-Ranges": "bytes",
+          "Age": "12771",
+          "cf-cache-status": "HIT",
+          "CF-RAY": "a053df4298340c17-NAG"
+        },
+        "sample_bytes": 528
+      },
+      {
+        "url": "https://example.com/",
+        "status": 200,
+        "reason": "OK",
+        "headers": {
+          "Date": "Tue, 02 Jun 2026 04:56:32 GMT",
+          "Content-Type": "text/html",
+          "Transfer-Encoding": "chunked",
+          "Connection": "close",
+          "Server": "cloudflare",
+          "last-modified": "Thu, 28 May 2026 18:39:43 GMT",
+          "allow": "GET, HEAD",
+          "Accept-Ranges": "bytes",
+          "Age": "9291",
+          "cf-cache-status": "HIT",
+          "CF-RAY": "a053df439af97b7a-HYD"
+        },
+        "sample_bytes": 528
+      }
+    ],
+    "tls": {
+      "subject": [
+        [
+          [
+            "commonName",
+            "example.com"
+          ]
+        ]
+      ],
+      "issuer": [
+        [
+          [
+            "countryName",
+            "US"
+          ]
+        ],
+        [
+          [
+            "organizationName",
+            "SSL Corporation"
+          ]
+        ],
+        [
+          [
+            "commonName",
+            "Cloudflare TLS Issuing ECC CA 3"
+          ]
+        ]
+      ],
+      "not_before": "May 31 21:39:12 2026 GMT",
+      "not_after": "Aug 29 21:41:26 2026 GMT",
+      "version": 3,
+      "serial_number": "1AA73FEA257BE3334B9A29552E6F878E",
+      "cipher": [
+        "TLS_AES_256_GCM_SHA384",
+        "TLSv1.3",
+        256
+      ]
+    },
+    "findings": [
+      {
+        "severity": "low",
+        "type": "missing_hsts",
+        "detail": "HTTPS response did not include Strict-Transport-Security"
+      },
+      {
+        "severity": "low",
+        "type": "missing_csp",
+        "detail": "HTTPS response did not include Content-Security-Policy"
+      }
+    ],
+    "report_path": "automation/product/website_reports/example.com_20260602_102632.txt"
+  }
+}

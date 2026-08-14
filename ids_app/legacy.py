@@ -1,34 +1,63 @@
 from __future__ import annotations
 
+import csv
 from datetime import datetime, timezone
 from functools import lru_cache
+from pathlib import Path
+from typing import Any
 
 import numpy as np
-import pandas as pd
 
 from .config import LEGACY_CLASSICAL_FILES, LEGACY_DNN_FILES, ROOT_DIR
 from .metrics import binary_metrics
 
 
-def _load_labels(path) -> np.ndarray:
+def _load_labels(path: Path) -> np.ndarray:
     return np.loadtxt(path).astype(int).reshape(-1)
 
 
-def _load_history(path) -> dict[str, float | int] | None:
+def _safe_float(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _load_history(path: Path) -> dict[str, float | int] | None:
     if not path.exists():
         return None
-    try:
-        frame = pd.read_csv(path)
-    except pd.errors.EmptyDataError:
+    with path.open("r", encoding="utf-8", errors="ignore", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    if not rows:
         return None
-    if frame.empty:
+
+    accuracy_values = [
+        value
+        for value in (_safe_float(row.get("accuracy")) for row in rows)
+        if value is not None
+    ]
+    loss_values = [
+        value
+        for value in (_safe_float(row.get("loss")) for row in rows)
+        if value is not None
+    ]
+    final_accuracy = _safe_float(rows[-1].get("accuracy"))
+    final_loss = _safe_float(rows[-1].get("loss"))
+
+    if (
+        not accuracy_values
+        or not loss_values
+        or final_accuracy is None
+        or final_loss is None
+    ):
         return None
+
     return {
-        "epochs_logged": int(len(frame)),
-        "best_accuracy": round(float(frame["accuracy"].max()), 6),
-        "best_loss": round(float(frame["loss"].min()), 6),
-        "final_accuracy": round(float(frame["accuracy"].iloc[-1]), 6),
-        "final_loss": round(float(frame["loss"].iloc[-1]), 6),
+        "epochs_logged": int(len(rows)),
+        "best_accuracy": round(max(accuracy_values), 6),
+        "best_loss": round(min(loss_values), 6),
+        "final_accuracy": round(final_accuracy, 6),
+        "final_loss": round(final_loss, 6),
     }
 
 
@@ -71,11 +100,31 @@ def evaluate_legacy_predictions() -> dict[str, object]:
         )
 
     history_map = {
-        "legacy_dnn1": ROOT_DIR / "dnn" / "kddresults" / "dnn1layer" / "training_set_dnnanalysis.csv",
-        "legacy_dnn2": ROOT_DIR / "dnn" / "kddresults" / "dnn2layer" / "training_set_dnnanalysis.csv",
-        "legacy_dnn3": ROOT_DIR / "dnn" / "kddresults" / "dnn3layer" / "training_set_dnnanalysis.csv",
-        "legacy_dnn4": ROOT_DIR / "dnn" / "kddresults" / "dnn4layer" / "training_set_dnnanalysis.csv",
-        "legacy_dnn5": ROOT_DIR / "dnn" / "kddresults" / "dnn5layer" / "training_set_dnnanalysis.csv",
+        "legacy_dnn1": ROOT_DIR
+        / "dnn"
+        / "kddresults"
+        / "dnn1layer"
+        / "training_set_dnnanalysis.csv",
+        "legacy_dnn2": ROOT_DIR
+        / "dnn"
+        / "kddresults"
+        / "dnn2layer"
+        / "training_set_dnnanalysis.csv",
+        "legacy_dnn3": ROOT_DIR
+        / "dnn"
+        / "kddresults"
+        / "dnn3layer"
+        / "training_set_dnnanalysis.csv",
+        "legacy_dnn4": ROOT_DIR
+        / "dnn"
+        / "kddresults"
+        / "dnn4layer"
+        / "training_set_dnnanalysis.csv",
+        "legacy_dnn5": ROOT_DIR
+        / "dnn"
+        / "kddresults"
+        / "dnn5layer"
+        / "training_set_dnnanalysis.csv",
     }
     for result in dnn_results:
         result["history"] = _load_history(history_map[result["id"]])

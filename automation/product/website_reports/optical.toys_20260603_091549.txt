@@ -1,0 +1,48 @@
+IDS Sentinel Website Scan Report
+================================
+Target: https://optical.toys/
+Hostname: optical.toys
+Created: 2026-06-03T03:45:49+00:00
+
+Safety note: Use website scanning only on domains you own or are authorized to assess.
+
+DNS
+---
+Canonical: optical.toys
+Aliases: 
+Addresses: 3.33.186.135, 15.197.167.90
+
+Ports
+-----
+   80 http           open    217.78 ms
+  443 https          open    160.16 ms
+ 8080 http-alt       closed  2002.96 ms
+ 8443                closed  1502.27 ms
+
+HTTP/HTTPS
+----------
+URL: https://optical.toys/
+  Status: 200 OK
+  Server: Netlify
+  Content-Type: text/html; charset=UTF-8
+  Content-Length: 25860
+  Strict-Transport-Security: max-age=31536000
+
+URL: https://optical.toys/
+  Status: 200 OK
+  Server: Netlify
+  Content-Type: text/html; charset=UTF-8
+  Content-Length: 25860
+  Strict-Transport-Security: max-age=31536000
+
+TLS Certificate
+---------------
+Not Before: Apr  8 19:55:45 2026 GMT
+Not After:  Jul  7 19:55:44 2026 GMT
+Cipher:     ('TLS_AES_128_GCM_SHA256', 'TLSv1.3', 128)
+Issuer:     ((('countryName', 'US'),), (('organizationName', "Let's Encrypt"),), (('commonName', 'E7'),))
+
+Findings
+--------
+[low] missing_csp: HTTPS response did not include Content-Security-Policy
+[low] missing_csp: HTTPS response did not include Content-Security-Policy

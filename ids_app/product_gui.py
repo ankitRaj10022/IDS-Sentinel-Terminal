@@ -151,6 +151,7 @@ class IDSProductGUI:
             ("Reports", ["reports", "--limit", "20"]),
             ("Cache", ["cache", "--limit", "20"]),
             ("Local Ports", ["ports", "--limit", "25"]),
+            ("Network Intrusions", ["intrusions", "--duration", "10", "--export"]),
             ("Processes", ["ps", "--limit", "25"]),
         ]:
             ttk.Button(sidebar, text=label, style="Sidebar.TButton", command=lambda cmd=command: self.run_command(cmd)).pack(fill="x", pady=4)
@@ -248,6 +249,12 @@ class IDSProductGUI:
             command=lambda: self.run_command(["probe", self.host_var.get(), self.ports_var.get()]),
         ).grid(row=0, column=4, padx=(8, 0))
         ttk.Button(tab, text="DNS", style="Tool.TButton", command=lambda: self.run_command(["dns", self.host_var.get()])).grid(row=0, column=5, padx=(8, 0))
+        ttk.Button(
+            tab,
+            text="Intrusions",
+            style="Primary.TButton",
+            command=lambda: self.run_command(["intrusions", "--duration", "10", "--export"]),
+        ).grid(row=1, column=1, sticky="w", pady=(10, 0))
 
     def _build_file_tab(self, notebook: ttk.Notebook) -> None:
         tab = ttk.Frame(notebook, padding=10, style="Tab.TFrame")

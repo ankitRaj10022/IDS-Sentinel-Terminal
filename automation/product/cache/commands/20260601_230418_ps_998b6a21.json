@@ -1,0 +1,41 @@
+{
+  "created_at": "2026-06-01T17:34:18+00:00",
+  "kind": "ps",
+  "payload": [
+    {
+      "image": "systemd",
+      "pid": "1",
+      "session": "",
+      "memory": "",
+      "args": "/usr/lib/systemd/systemd --system --deserialize=154 splash"
+    },
+    {
+      "image": "kthreadd",
+      "pid": "2",
+      "session": "",
+      "memory": "",
+      "args": "[kthreadd]"
+    },
+    {
+      "image": "pool_workqueue_",
+      "pid": "3",
+      "session": "",
+      "memory": "",
+      "args": "[pool_workqueue_release]"
+    },
+    {
+      "image": "kworker/R-rcu_g",
+      "pid": "4",
+      "session": "",
+      "memory": "",
+      "args": "[kworker/R-rcu_gp]"
+    },
+    {
+      "image": "kworker/R-sync_",
+      "pid": "5",
+      "session": "",
+      "memory": "",
+      "args": "[kworker/R-sync_wq]"
+    }
+  ]
+}

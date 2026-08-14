@@ -1,0 +1,39 @@
+{
+  "created_at": "2026-06-02T04:49:51+00:00",
+  "kind": "live",
+  "payload": {
+    "summary": {
+      "created_at": "2026-06-02T04:49:51+00:00",
+      "connection_count": 20,
+      "listening_count": 20,
+      "remote_hosts": {},
+      "local_ports": {
+        "53": 6,
+        "5353": 4,
+        "323": 2,
+        "1716": 2,
+        "631": 2,
+        "67": 1,
+        "59321": 1,
+        "36131": 1,
+        "50136": 1
+      },
+      "remote_ports": {},
+      "states": {
+        "UDP": 14,
+        "LISTEN": 6
+      },
+      "risky_ports": [
+        53
+      ]
+    },
+    "profile_path": null,
+    "findings": [
+      {
+        "severity": "medium",
+        "type": "sensitive_port",
+        "detail": "port 53: DNS. Watch for tunneling, amplification, and suspicious resolver exposure."
+      }
+    ]
+  }
+}

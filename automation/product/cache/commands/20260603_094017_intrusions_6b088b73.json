@@ -1,0 +1,62 @@
+{
+  "created_at": "2026-06-03T04:10:17+00:00",
+  "kind": "intrusions",
+  "payload": {
+    "scanned_at": "2026-06-03T04:10:17+00:00",
+    "duration_seconds": 3,
+    "interval_seconds": 1.5,
+    "host": "danny-Machine",
+    "netstat_warning": null,
+    "connection_summary": {
+      "created_at": "2026-06-03T04:10:17+00:00",
+      "connection_count": 2,
+      "listening_count": 2,
+      "remote_hosts": {},
+      "local_ports": {
+        "41611": 1,
+        "44299": 1
+      },
+      "remote_ports": {},
+      "states": {
+        "LISTEN": 2
+      },
+      "risky_ports": []
+    },
+    "snapshots": [
+      {
+        "at": "2026-06-03T04:10:14+00:00",
+        "connections": 2,
+        "findings": 2
+      },
+      {
+        "at": "2026-06-03T04:10:15+00:00",
+        "connections": 2,
+        "findings": 2
+      }
+    ],
+    "ioc_count": 0,
+    "profile_available": true,
+    "finding_counts": {
+      "medium": 2
+    },
+    "findings": [
+      {
+        "severity": "medium",
+        "type": "profile_anomaly",
+        "location": "41611",
+        "possibility": "Live baseline anomaly: new_local_port",
+        "impact": "New hosts or ports may mean lateral movement, new malware, or unauthorized software.",
+        "prevention": "Run 'live learn' on a known-good period, then 'intrusions' regularly; investigate new PIDs with 'ps' and 'filescan'."
+      },
+      {
+        "severity": "medium",
+        "type": "profile_anomaly",
+        "location": "44299",
+        "possibility": "Live baseline anomaly: new_local_port",
+        "impact": "New hosts or ports may mean lateral movement, new malware, or unauthorized software.",
+        "prevention": "Run 'live learn' on a known-good period, then 'intrusions' regularly; investigate new PIDs with 'ps' and 'filescan'."
+      }
+    ],
+    "note": "Defensive host triage only. No packets are captured. Use only on systems and networks you own or are authorized to test."
+  }
+}
