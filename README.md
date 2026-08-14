@@ -35,6 +35,8 @@ IDS-Sentinel-Terminal/
   ids_app/product_terminal.py          Main product terminal code
   ids_app/assets/                      Bundled seed datasets and starter model
   tools/TerminalLauncher.cs            Source for optional native exe launcher
+  kddtrain.csv                         Training traffic CSV
+  kddtest.csv                          Testing traffic CSV
   automation/product/
     self_learning_model.json           Learned IDS profile
     iocs.json                          Stored indicators of compromise

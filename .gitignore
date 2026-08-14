@@ -7,14 +7,3 @@ __pycache__/
 .tmp-*/
 ids_sentinel_terminal.egg-info/
 build/python-package-src/
-
-# ML and Dataset Artifacts
-*.keras
-*.csv
-!ids_app/assets/*.csv
-classical/*.txt
-
-# Temporary and backup files
-*.save
-temp*.py
-tempCodeRunnerFile.py
